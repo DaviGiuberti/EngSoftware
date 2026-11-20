@@ -5,7 +5,7 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 ## Convenções de nome no código
 
 - Nomes do domínio em português, sem acento: `Matricula`, `Promocao`, `Questao`.
-- Entidades e tipos em PascalCase (`ListaDeEspera`). Campos, funções e valores em camelCase (`emRevisao`, `nivelMaximo`).
+- Classes e tipos em PascalCase (`ListaDeEspera`). Campos, funções, variáveis e valores em snake_case (`em_revisao`, `nivel_maximo`), como no padrão PEP 8 do Python.
 - Um termo novo entra aqui antes de entrar no código. Se um nome mudar, ele muda aqui e no código no mesmo commit.
 
 ## Pessoas e perfis
@@ -25,7 +25,7 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 |---|---|---|
 | Matéria | Assunto ensinado, como Física. Define quantos níveis tem, as faixas e as questões do nivelamento e o valor da mensalidade. | `Materia` |
 | Nível | Degrau da trilha de uma matéria, do N1 até o nível máximo. O aluno tem um nível em cada matéria (R01). | `Nivel` |
-| Nível máximo | Último nível de uma matéria. Ser aprovado nele conclui a trilha (R09). | `nivelMaximo` |
+| Nível máximo | Último nível de uma matéria. Ser aprovado nele conclui a trilha (R09). | `nivel_maximo` |
 | Trilha | Sequência de níveis de uma matéria, do N1 ao nível máximo, percorrida um nível por vez (R09). | `Trilha` |
 | Nivelamento | Prova de múltipla escolha, feita na plataforma uma vez por matéria, que define o nível inicial do aluno. Tem 60 minutos (R03, R30). | `Nivelamento` |
 | Questão | Pergunta de múltipla escolha do nivelamento, com uma alternativa correta, cadastrada pelo ADM. | `Questao` |
@@ -40,11 +40,11 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Vaga | Lugar de um aluno numa turma. Cada turma tem 12. | `vagas` |
 | Etapa | Período de 24 aulas da turma num nível. Termina depois da 24ª aula, com a prova final (R17). | `Etapa` |
 | Aula | Encontro ao vivo da turma, no horário dela, pelo link do Google Meet. Numerada de 1 a 24 dentro da etapa. | `Aula` |
-| Aula não realizada | Aula que não aconteceu (feriado, professor doente). Não conta nas 24 e é reposta no fim da etapa, no mesmo horário (R18). | `naoRealizada` (situação da `Aula`) |
+| Aula não realizada | Aula que não aconteceu (feriado, professor doente). Não conta nas 24 e é reposta no fim da etapa, no mesmo horário (R18). | `nao_realizada` (situação da `Aula`) |
 | Matrícula | Vínculo do aluno com uma turma. Começa com o pagamento da primeira mensalidade, só antes da 13ª aula da etapa, e guarda a aula de entrada, a partir da qual as faltas contam (R08, R19, R27). | `Matricula` |
 | Lista de espera | Lista, em ordem de entrada, dos alunos que esperam vaga numa turma cheia. Quando abre vaga, o 1º tem 72 horas para confirmar (R05). | `ListaDeEspera` |
 | Presença | Registro, por aula e por aluno, de que ele esteve presente ou ausente. Lançado pelo professor da turma ou pelo ADM (R10). | `Presenca` |
-| Falta | Presença marcada como ausente. Só conta a partir da entrada do aluno na turma; o limite é de 6 por etapa (R08). | `Presenca` com `presente: false` |
+| Falta | Presença marcada como ausente. Só conta a partir da entrada do aluno na turma; o limite é de 6 por etapa (R08). | `Presenca` com `presente=False` |
 | Prova final | Prova do fim da etapa, aplicada pelo professor fora da plataforma. O professor lança a nota (R20). | `ProvaFinal` |
 | Correção | Mudança de uma presença ou nota já lançada. O professor corrige até 72 horas depois do lançamento; depois, só o ADM, e o nível só muda para cima (R22). | `Correcao` |
 
@@ -70,7 +70,7 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Termo | Significado | Nome no código |
 |---|---|---|
 | Pacote | Conjunto de aulas gravadas de uma matéria e um nível, vendido junto. Criado pelo professor (R15). | `Pacote` |
-| Estado do pacote | Ponto do pacote no fluxo rascunho → em revisão → publicado → arquivado. O professor envia para revisão; o ADM publica ou devolve, e pode publicar de novo um pacote arquivado (R15). | `EstadoPacote` (`rascunho`, `emRevisao`, `publicado`, `arquivado`) |
+| Estado do pacote | Ponto do pacote no fluxo rascunho → em revisão → publicado → arquivado. O professor envia para revisão; o ADM publica ou devolve, e pode publicar de novo um pacote arquivado (R15). | `EstadoPacote` (`rascunho`, `em_revisao`, `publicado`, `arquivado`) |
 | Aula gravada | Vídeo de um pacote, incorporado do YouTube (não listado). | `AulaGravada` |
 | Aula concluída | Marcação do aluno de que terminou uma aula gravada. Conta como atividade de estudo. | `AulaConcluida` |
 | Vitrine | Lista dos pacotes publicados, de todos os níveis, com destaque para os do nível do aluno (R31). | `Vitrine` |
@@ -86,9 +86,9 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Termo | Significado | Nome no código |
 |---|---|---|
 | Atividade de estudo | Presença numa aula da turma ou aula gravada concluída. É o que as métricas contam. | `AtividadeDeEstudo` |
-| M1, taxa de progressão | Porcentagem dos alunos que concluíram o nivelamento no período e foram promovidos pelo menos uma vez em até 6 meses. | `taxaDeProgressao` |
-| M2, continuidade na trilha | Porcentagem dos alunos com nivelamento feito há pelo menos 4 semanas que tiveram atividade de estudo na 4ª semana. | `continuidadeNaTrilha` |
-| M3, tempo até estudar no nível certo | Mediana dos dias entre o nivelamento e a primeira atividade de estudo no nível recebido. | `tempoAteNivelCerto` |
+| M1, taxa de progressão | Porcentagem dos alunos que concluíram o nivelamento no período e foram promovidos pelo menos uma vez em até 6 meses. | `taxa_de_progressao` |
+| M2, continuidade na trilha | Porcentagem dos alunos com nivelamento feito há pelo menos 4 semanas que tiveram atividade de estudo na 4ª semana. | `continuidade_na_trilha` |
+| M3, tempo até estudar no nível certo | Mediana dos dias entre o nivelamento e a primeira atividade de estudo no nível recebido. | `tempo_ate_nivel_certo` |
 
 ## Termos que não usamos
 
