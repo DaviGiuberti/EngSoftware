@@ -114,7 +114,8 @@ Pelo YAGNI, estes itens só entram quando houver evidência de que são necessá
 | Chat, fórum, comentários, avaliação de cursos | Nada. |
 | Repasse financeiro e relatórios de vendas para professores | Nada. |
 | Recuperação de senha e login social | Nada. |
-| App mobile | Interface web. |
+| App mobile e site | Aplicativo para computador (Windows) ([ADR 0001](adr/0001-stack.md)). |
+| Vários computadores com os mesmos dados | Um computador só: aluno, professor e ADM fazem login no mesmo app. |
 | Dashboard com gráficos | Os três números na tela do ADM. |
 
 ### Ordem de entrega
@@ -126,7 +127,7 @@ Cada fatia funciona da tela ao banco antes de a próxima começar. A ordem segue
 | 1 | Base do projeto (repositório, CI, estrutura), cadastro de matérias, níveis e faixas, e o nivelamento: o aluno faz o teste e vê o seu nível. |
 | 2 | Turmas: o ADM cria a turma, o aluno se matricula (nível, horário, limite da 13ª aula) ou entra na lista de espera, e o professor lança presença. |
 | 3 | Prova final, subida de nível com o prazo de correção de 72 horas, certificados de nível e de trilha, e mensalidade simulada. |
-| 4 | Pacotes (revisão, publicação, compra, reembolso e aula concluída), tela de métricas, README, deploy e ensaio da apresentação. |
+| 4 | Pacotes (revisão, publicação, compra, reembolso e aula concluída), tela de métricas, README, release do executável e ensaio da apresentação. |
 
 Com as regras da entrevista, o plano ficou mais apertado. Se o prazo apertar, simplifica a tela, não a regra: as regras ficam no núcleo, com testes, e partes como lista de espera e mensalidade ganham uma interface mínima. Nenhuma das duas frentes sai do MVP.
 
