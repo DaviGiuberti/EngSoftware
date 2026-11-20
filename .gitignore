@@ -3,20 +3,32 @@ Projeto.txt
 docs/Guia do Projeto*.pdf
 docs/Guia do Projeto*.md
 docs/eventstorming.html
-
-# Configuração pessoal do Claude Code
 .claude/settings.local.json
 
-# Node
-node_modules/
-dist/
-build/
-coverage/
+# Documentos fora do repositório por enquanto
+docs/postmortem-template.md
+docs/sprints/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 *.log
-npm-debug.log*
-.npm/
-.eslintcache
-*.tsbuildinfo
+
+# PyInstaller (o arquivo .spec fica no Git)
+build/
+dist/
+
+# Banco local
+*.db
+*.sqlite3
 
 # Segredos
 .env
