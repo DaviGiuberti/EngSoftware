@@ -1,25 +1,63 @@
-"""Monta o app: banco na pasta de dados, migrações, verificação e janela principal."""
+"""Monta o app: banco na pasta de dados, migrações, log, casos de uso e janela principal."""
 
 import os
 import sys
+from functools import partial
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
 
-from plataforma.banco import PASTA_MIGRACOES, aplicar_migracoes, verificar_banco
+from plataforma.banco import (
+    PASTA_MIGRACOES,
+    aplicar_migracoes,
+    conectar,
+    transacao,
+    verificar_banco,
+)
 from plataforma.janela_principal import JanelaPrincipal
+from plataforma.log import configurar_log, fechar_log
+from plataforma.modules.identidade.application.casos_de_uso import (
+    CadastrarAluno,
+    CasosDeUsoDaIdentidade,
+    CriarPrimeiroAdm,
+    Entrar,
+)
+from plataforma.modules.identidade.infra.repositorio_de_usuarios import (
+    RepositorioDeUsuariosSqlite,
+)
 
 
 def pasta_de_dados_padrao() -> Path:
-    """Pasta do banco e das cópias, a mesma para o código e para qualquer .exe (RNF16)."""
+    """Pasta do banco, das cópias e do log, a mesma para o código e para qualquer .exe."""
     return Path(os.environ["LOCALAPPDATA"]) / "Plataforma"
 
 
 def criar_janela(pasta_de_dados: Path) -> JanelaPrincipal:
-    """Aplica as migrações no banco da pasta de dados, verifica o banco e monta a janela."""
+    """Aplica as migrações, liga o log, monta os casos de uso e a janela.
+
+    É o único lugar que conhece as implementações da infra/: os casos de uso recebem as
+    portas prontas. Ao fechar a janela, a conexão e o log são fechados.
+    """
     caminho_banco = pasta_de_dados / "plataforma.db"
     aplicar_migracoes(caminho_banco, PASTA_MIGRACOES, pasta_de_dados / "copias")
-    return JanelaPrincipal(banco_ok=verificar_banco(caminho_banco))
+    configurar_log(pasta_de_dados / "logs")
+    conexao = conectar(caminho_banco)
+    em_transacao = partial(transacao, conexao)
+
+    usuarios = RepositorioDeUsuariosSqlite(conexao)
+    identidade = CasosDeUsoDaIdentidade(
+        cadastrar_aluno=CadastrarAluno(usuarios, em_transacao),
+        entrar=Entrar(usuarios),
+        criar_primeiro_adm=CriarPrimeiroAdm(usuarios, em_transacao),
+    )
+
+    def ao_fechar() -> None:
+        conexao.close()
+        fechar_log()
+
+    return JanelaPrincipal(
+        banco_ok=verificar_banco(caminho_banco), identidade=identidade, ao_fechar=ao_fechar
+    )
 
 
 def main() -> int:

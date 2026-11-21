@@ -1,11 +1,36 @@
-"""Banco SQLite do app: migrações, cópias de segurança antes de migrar (RNF16) e verificação."""
+"""Banco SQLite do app: migrações, cópias de segurança antes de migrar (RNF16), conexão,
+transações e verificação."""
 
 import sqlite3
-from contextlib import closing
+from collections.abc import Iterator
+from contextlib import closing, contextmanager
 from pathlib import Path
 
 PASTA_MIGRACOES = Path(__file__).parent / "migracoes"
 COPIAS_MANTIDAS = 3
+
+
+def conectar(caminho_banco: Path) -> sqlite3.Connection:
+    """Abre a conexão que o app usa, com as chaves estrangeiras ligadas.
+
+    O sqlite3 não abre transações sozinho (isolation_level=None): cada caso de uso abre a
+    sua com transacao(conexao).
+    """
+    conexao = sqlite3.connect(caminho_banco, isolation_level=None)
+    conexao.execute("PRAGMA foreign_keys = ON")
+    return conexao
+
+
+@contextmanager
+def transacao(conexao: sqlite3.Connection) -> Iterator[None]:
+    """Grava tudo ou nada (RNF05): confirma no fim do bloco e desfaz se ele levantar erro."""
+    conexao.execute("BEGIN")
+    try:
+        yield
+    except BaseException:
+        conexao.execute("ROLLBACK")
+        raise
+    conexao.execute("COMMIT")
 
 
 def aplicar_migracoes(caminho_banco: Path, pasta_migracoes: Path, pasta_copias: Path) -> None:

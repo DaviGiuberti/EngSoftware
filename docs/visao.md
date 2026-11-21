@@ -2,7 +2,7 @@
 
 Plataforma de ensino por níveis. Projeto final de Engenharia de Software (UNIFESP).
 
-Equipe: 1 pessoa · Entrega: 02/12/2026 · Atualizado em 16/11/2026
+Equipe: 1 pessoa · Entrega: 02/12/2026 · Atualizado em 21/11/2026
 
 ## 1. Problema
 
@@ -83,7 +83,7 @@ Medir só vale se o resultado mudar o próximo passo (construir → medir → ap
 
 | Funcionalidade | Versão do MVP |
 |---|---|
-| Cadastro e login | E-mail e senha. O aluno se cadastra sozinho. O ADM inicial já vem criado e cadastra os professores. |
+| Cadastro e login | E-mail e senha. O aluno se cadastra sozinho. O primeiro ADM é criado na primeira vez que o app abre, sem senha padrão, e cadastra os professores. |
 | Matérias e níveis | O ADM cadastra matérias, quantos níveis cada uma tem e as faixas de nota do nivelamento (R01, R02). |
 | Teste de nivelamento | Um teste de múltipla escolha por matéria, feito uma vez, com 60 minutos e retomada de onde parou. A correção é automática e define o nível inicial (R03, R30). |
 | Turmas | O ADM cria a turma com matéria, nível inicial, professor, dias e horário fixos e 12 vagas. O aluno se matricula só no seu nível, sem conflito de horário e até antes da 13ª aula da etapa (R04, R06, R07, R19, R24). |
