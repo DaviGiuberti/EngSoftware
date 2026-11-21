@@ -7,9 +7,11 @@ from plataforma.modules.nivelamento.domain.questao import (
     EnunciadoVazio,
     NivelamentoIndisponivel,
     Questao,
+    QuestaoParaResponder,
     SemAlternativaCorreta,
     exigir_questoes,
     nova_questao,
+    para_responder,
 )
 
 ENUNCIADO = "Um carro anda 100 m em 25 s. Qual é a velocidade média?"
@@ -68,6 +70,23 @@ def test_a_letra_da_alternativa_correta_vai_de_a_a_e() -> None:
     questao = Questao(id=1, materia_id=1, enunciado=ENUNCIADO, alternativas=alternativas)
 
     assert questao.letra_da_correta == "E"
+
+
+def test_a_posicao_da_alternativa_correta_vai_de_0_a_4() -> None:
+    alternativas = nova_questao(ENUNCIADO, ALTERNATIVAS, indice_da_correta=4).alternativas
+
+    questao = Questao(id=1, materia_id=1, enunciado=ENUNCIADO, alternativas=alternativas)
+
+    assert questao.posicao_da_correta == 4
+
+
+def test_o_aluno_recebe_a_questao_sem_saber_qual_e_a_correta() -> None:
+    alternativas = nova_questao(ENUNCIADO, ALTERNATIVAS, indice_da_correta=1).alternativas
+    questao = Questao(id=7, materia_id=1, enunciado=ENUNCIADO, alternativas=alternativas)
+
+    assert para_responder(questao) == QuestaoParaResponder(
+        id=7, enunciado=ENUNCIADO, alternativas=tuple(ALTERNATIVAS)
+    )
 
 
 def test_materia_sem_questoes_recusa_o_nivelamento() -> None:

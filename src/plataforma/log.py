@@ -6,13 +6,14 @@ senha.
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from plataforma.compartilhado.horario import BRASILIA
+
 TAMANHO_MAXIMO_DO_ARQUIVO = 1_000_000
 ARQUIVOS_ANTIGOS = 4  # com o arquivo atual, são 5
-BRASILIA = timezone(timedelta(hours=-3))
 
 _logger = logging.getLogger("plataforma")
 

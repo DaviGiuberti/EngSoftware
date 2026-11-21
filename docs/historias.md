@@ -829,7 +829,7 @@ Cenário: R22 — correção do ADM que reprova quem já foi promovido
 
 ### H33 · Abrir exceções no nivelamento
 
-Como ADM, quero liberar que um aluno refaça o nivelamento ou dar mais tempo a ele para resolver casos excepcionais, como um problema técnico durante o teste. Prioridade: Média. Regras: R03, R30.
+Como ADM, quero liberar que um aluno refaça o nivelamento ou dar mais tempo a ele para resolver casos excepcionais, como um problema técnico durante o teste. Prioridade: Média. Regras: R03, R30, R42.
 
 ```gherkin
 Cenário: R30 — mais tempo de prova
@@ -846,6 +846,11 @@ Cenário: R03 — a liberação vale para uma tentativa
   Dado um aluno que refez o nivelamento de Física depois da liberação do ADM
   Quando ele tenta fazer o nivelamento de Física de novo
   Então o sistema recusa
+
+Cenário: R42 — resultado menor no nivelamento refeito
+  Dado um aluno que ficou no N2 de Física pelo nivelamento
+  Quando o ADM libera que ele refaça o nivelamento e ele tira 30%
+  Então ele continua no N2 de Física
 ```
 
 ### H34 · Revisar e publicar pacote
@@ -1028,3 +1033,4 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R39 | H38 |
 | R40 | H27 |
 | R41 | H28 |
+| R42 | H33 |

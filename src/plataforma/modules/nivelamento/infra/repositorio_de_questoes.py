@@ -40,3 +40,9 @@ class RepositorioDeQuestoesSqlite:
             Questao(questao_id, materia_id, enunciado, tuple(alternativas[questao_id]))
             for questao_id, enunciado in enunciados.items()
         ]
+
+    def contar_por_materia(self) -> dict[int, int]:
+        linhas = self._conexao.execute(
+            "SELECT materia_id, COUNT(*) FROM questao GROUP BY materia_id"
+        ).fetchall()
+        return dict(linhas)

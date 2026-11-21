@@ -15,6 +15,10 @@ class PrimeiroAdmJaCriado(Recusa):
     mensagem = "O primeiro ADM já foi criado."
 
 
+class AlunoNaoEncontrado(Recusa):
+    mensagem = "Nenhum aluno com este e-mail."
+
+
 def normalizar_email(email: str) -> str:
     """Tira os espaços das pontas e passa para minúsculas, para comparar e-mails (R39)."""
     return email.strip().lower()

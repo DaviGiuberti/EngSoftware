@@ -14,11 +14,13 @@ from plataforma.banco import (
     transacao,
     verificar_banco,
 )
+from plataforma.compartilhado.relogio import Relogio
 from plataforma.janela_principal import CasosDeUso, JanelaPrincipal
 from plataforma.log import configurar_log, fechar_log
 from plataforma.modules.identidade.application.casos_de_uso import (
     CadastrarAluno,
     CasosDeUsoDaIdentidade,
+    ConsultaDeAlunos,
     CriarPrimeiroAdm,
     Entrar,
 )
@@ -38,9 +40,23 @@ from plataforma.modules.nivelamento.application.casos_de_uso import (
     CasosDeUsoDoNivelamento,
     ListarQuestoes,
 )
+from plataforma.modules.nivelamento.application.fazer_nivelamento import (
+    ConcluirNivelamento,
+    DarMaisTempo,
+    FecharNivelamento,
+    IniciarNivelamento,
+    LiberarRefazer,
+    RegistrarTempo,
+    ResponderQuestao,
+    VerMeusNiveis,
+)
+from plataforma.modules.nivelamento.infra.repositorio_de_nivelamentos import (
+    RepositorioDeNivelamentosSqlite,
+)
 from plataforma.modules.nivelamento.infra.repositorio_de_questoes import (
     RepositorioDeQuestoesSqlite,
 )
+from plataforma.relogio import RelogioDoSistema
 
 
 def pasta_de_dados_padrao() -> Path:
@@ -48,12 +64,14 @@ def pasta_de_dados_padrao() -> Path:
     return Path(os.environ["LOCALAPPDATA"]) / "Plataforma"
 
 
-def criar_janela(pasta_de_dados: Path) -> JanelaPrincipal:
+def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> JanelaPrincipal:
     """Aplica as migrações, liga o log, monta os casos de uso e a janela.
 
     É o único lugar que conhece as implementações da infra/: os casos de uso recebem as
-    portas prontas. Ao fechar a janela, a conexão e o log são fechados.
+    portas prontas. O relógio é o do sistema, a não ser que um teste passe outro. Ao fechar
+    a janela, a conexão e o log são fechados.
     """
+    relogio = relogio or RelogioDoSistema()
     caminho_banco = pasta_de_dados / "plataforma.db"
     aplicar_migracoes(caminho_banco, PASTA_MIGRACOES, pasta_de_dados / "copias")
     configurar_log(pasta_de_dados / "logs")
@@ -61,9 +79,12 @@ def criar_janela(pasta_de_dados: Path) -> JanelaPrincipal:
     em_transacao = partial(transacao, conexao)
 
     usuarios = RepositorioDeUsuariosSqlite(conexao)
+    alunos = ConsultaDeAlunos(usuarios)
     materias = RepositorioDeMateriasSqlite(conexao)
     consulta_de_materias = ConsultaDeMaterias(materias)
     questoes = RepositorioDeQuestoesSqlite(conexao)
+    nivelamentos = RepositorioDeNivelamentosSqlite(conexao)
+    do_aluno = (nivelamentos, questoes, consulta_de_materias, relogio, em_transacao)
     casos_de_uso = CasosDeUso(
         identidade=CasosDeUsoDaIdentidade(
             cadastrar_aluno=CadastrarAluno(usuarios, em_transacao),
@@ -77,6 +98,18 @@ def criar_janela(pasta_de_dados: Path) -> JanelaPrincipal:
         nivelamento=CasosDeUsoDoNivelamento(
             cadastrar_questao=CadastrarQuestao(questoes, consulta_de_materias, em_transacao),
             listar_questoes=ListarQuestoes(questoes),
+            iniciar=IniciarNivelamento(*do_aluno),
+            responder=ResponderQuestao(*do_aluno),
+            registrar_tempo=RegistrarTempo(*do_aluno),
+            fechar=FecharNivelamento(*do_aluno),
+            concluir=ConcluirNivelamento(*do_aluno),
+            ver_meus_niveis=VerMeusNiveis(nivelamentos, questoes, consulta_de_materias),
+            dar_mais_tempo=DarMaisTempo(
+                nivelamentos, consulta_de_materias, alunos, relogio, em_transacao
+            ),
+            liberar_refazer=LiberarRefazer(
+                nivelamentos, consulta_de_materias, alunos, em_transacao
+            ),
         ),
     )
 
