@@ -1,6 +1,7 @@
 """Casos de uso do nivelamento: questões (H28)."""
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 from plataforma.compartilhado.transacao import Transacao
 from plataforma.modules.identidade.domain.autorizacao import exigir_perfil
@@ -47,3 +48,11 @@ class ListarQuestoes:
     def executar(self, usuario: Usuario, materia_id: int) -> list[Questao]:
         exigir_perfil(usuario, Perfil.ADM, "ver as questões do nivelamento")
         return self._questoes.listar(materia_id)
+
+
+@dataclass(frozen=True)
+class CasosDeUsoDoNivelamento:
+    """Os casos de uso do módulo, montados pelo main.py e entregues às telas."""
+
+    cadastrar_questao: CadastrarQuestao
+    listar_questoes: ListarQuestoes

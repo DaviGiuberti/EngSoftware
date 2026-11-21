@@ -1,6 +1,7 @@
 """Casos de uso do módulo materias (H27)."""
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 from plataforma.compartilhado.transacao import Transacao
 from plataforma.modules.identidade.domain.autorizacao import exigir_perfil
@@ -53,3 +54,11 @@ class ConsultaDeMaterias:
         if materia is None:
             raise MateriaNaoEncontrada()
         return materia
+
+
+@dataclass(frozen=True)
+class CasosDeUsoDeMaterias:
+    """Os casos de uso do módulo, montados pelo main.py e entregues às telas."""
+
+    cadastrar_materia: CadastrarMateria
+    consulta: ConsultaDeMaterias
