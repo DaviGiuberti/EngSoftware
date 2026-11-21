@@ -134,5 +134,4 @@ Com as regras da entrevista, o plano ficou mais apertado. Se o prazo apertar, si
 ## 6. Pendências
 
 - **Matérias da demonstração:** o sistema aceita várias matérias cadastradas pelo ADM; falta escolher quais aparecem na apresentação.
-- **Sugestões S01 a S26** do [regras.md](regras.md): aguardam decisão.
 - **Piloto da M3:** confirmar se haverá colegas para participar.

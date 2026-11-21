@@ -1,6 +1,6 @@
 # Regras de negócio
 
-Regras decididas pelo autor: a lista original mais as respostas da entrevista de 16/11/2026, registrada em [ia/grill-me-regras.md](ia/grill-me-regras.md). Entre parênteses, a pergunta da entrevista que originou ou mudou a regra.
+Regras decididas pelo autor: a lista original, as respostas da entrevista de 16/11/2026, registrada em [ia/grill-me-regras.md](ia/grill-me-regras.md), e as regras R34 a R38, que surgiram ao escrever os critérios das [histórias](historias.md). Entre parênteses, a pergunta da entrevista ou a história que originou ou mudou a regra.
 
 Os números não mudam: uma regra alterada mantém o número, e as regras novas começam na R17. Regras marcadas com **[Fora do MVP]** ficam documentadas, mas não entram na entrega de 02/12/2026.
 
@@ -17,6 +17,9 @@ O nivelamento é feito uma única vez por matéria, só por quem ainda não tem 
 
 R30
 O nivelamento tem 60 minutos de prova, e o tempo só corre com o teste aberto. Se o aluno fechar o navegador ou a conexão cair, ele retoma de onde parou. O ADM pode dar mais tempo a um aluno ou liberar que ele refaça. (17.3, 18.4, 19.2, 19.3)
+
+R34
+A nota do nivelamento é a porcentagem de acertos sobre o total de questões, arredondada para baixo (39,9% vira 39%). Questão sem resposta conta como erro. Quando os 60 minutos acabam, o teste é encerrado e corrigido com o que foi respondido. (H01)
 
 R31
 Quem só quer pacotes gravados não precisa fazer o nivelamento. Qualquer aluno compra pacote de qualquer nível. (4.2)
@@ -40,6 +43,9 @@ O ADM habilita o professor por matéria. Habilitado numa matéria, ele pode dar 
 
 R05 *(alterada)*
 Turma cheia: o aluno entra numa lista de espera. Quando abre uma vaga, o primeiro da fila tem 72 horas para confirmar; se não confirmar, a vaga passa para o próximo. (6.3, 8.3)
+
+R35
+Quem não confirma a vaga dentro das 72 horas sai da lista de espera. (H06)
 
 R06
 O aluno só se matricula em turma do seu nível naquela matéria.
@@ -85,6 +91,9 @@ O aluno reprovado continua na turma, ocupando a vaga, durante as 72 horas de cor
 R33
 Certificado de nível: emitido quando o aluno sobe de nível pela R08. Certificado de trilha: emitido quando ele conclui o nível máximo da matéria. (14.4)
 
+R36
+Ao ser aprovado no nível máximo, o aluno recebe o certificado de nível desse nível e o certificado de trilha. (H12)
+
 ## Mensalidade
 
 R27
@@ -93,6 +102,9 @@ A turma é paga por mensalidade, com valor definido por matéria. A primeira men
 R28
 Com a mensalidade atrasada, o aluno tem 7 dias de tolerância; depois disso, perde a vaga. (6.1, 7.4)
 
+R37
+A tolerância da mensalidade vai até as 23h59 do 7º dia depois do vencimento. Na virada para o 8º dia, o aluno perde a vaga. (H07)
+
 R29
 Quem sai da turma por vontade própria não recebe reembolso da mensalidade. (12.1)
 
@@ -100,6 +112,9 @@ Quem sai da turma por vontade própria não recebe reembolso da mensalidade. (12
 
 R15 *(alterada)*
 O pacote passa por rascunho → em revisão → publicado → arquivado. O professor cria o pacote e envia para revisão; o ADM publica ou devolve. Só o ADM define e altera o preço. O professor edita o pacote publicado direto, sem nova revisão. O ADM pode publicar de novo um pacote arquivado. (12.4, 14.1, 14.2, 15.4)
+
+R38
+Quando o ADM devolve um pacote em revisão, ele volta para rascunho, e o professor pode editá-lo e enviá-lo de novo. (H34)
 
 R12 *(alterada)*
 A compra de um pacote libera o acesso por 12 meses. Com acesso ativo, o aluno não pode comprar o mesmo pacote de novo. Se o pacote for arquivado, quem comprou mantém o acesso até o fim dos 12 meses. (13.3, 13.4)
