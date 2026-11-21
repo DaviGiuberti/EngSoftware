@@ -19,10 +19,16 @@ from plataforma.janela_principal import CasosDeUso, JanelaPrincipal
 from plataforma.log import configurar_log, fechar_log
 from plataforma.modules.identidade.application.casos_de_uso import (
     CadastrarAluno,
+    CadastrarProfessor,
     CasosDeUsoDaIdentidade,
     ConsultaDeAlunos,
+    ConsultaDeProfessores,
     CriarPrimeiroAdm,
     Entrar,
+    HabilitarProfessor,
+)
+from plataforma.modules.identidade.infra.repositorio_de_professores import (
+    RepositorioDeProfessoresSqlite,
 )
 from plataforma.modules.identidade.infra.repositorio_de_usuarios import (
     RepositorioDeUsuariosSqlite,
@@ -80,6 +86,8 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
 
     usuarios = RepositorioDeUsuariosSqlite(conexao)
     alunos = ConsultaDeAlunos(usuarios)
+    professores = RepositorioDeProfessoresSqlite(conexao)
+    consulta_de_professores = ConsultaDeProfessores(professores)
     materias = RepositorioDeMateriasSqlite(conexao)
     consulta_de_materias = ConsultaDeMaterias(materias)
     questoes = RepositorioDeQuestoesSqlite(conexao)
@@ -90,6 +98,11 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
             cadastrar_aluno=CadastrarAluno(usuarios, em_transacao),
             entrar=Entrar(usuarios),
             criar_primeiro_adm=CriarPrimeiroAdm(usuarios, em_transacao),
+            cadastrar_professor=CadastrarProfessor(usuarios, em_transacao),
+            habilitar_professor=HabilitarProfessor(
+                professores, consulta_de_materias, em_transacao
+            ),
+            consulta_de_professores=consulta_de_professores,
         ),
         materias=CasosDeUsoDeMaterias(
             cadastrar_materia=CadastrarMateria(materias, em_transacao),

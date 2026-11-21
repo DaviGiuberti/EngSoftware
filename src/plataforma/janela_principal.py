@@ -24,6 +24,7 @@ from plataforma.modules.identidade.ui.telas import (
     TelaEntrar,
     TelaPrimeiroAdm,
 )
+from plataforma.modules.identidade.ui.telas_do_adm import TelaProfessores
 from plataforma.modules.materias.application.casos_de_uso import CasosDeUsoDeMaterias
 from plataforma.modules.materias.ui.telas import TelaMaterias
 from plataforma.modules.nivelamento.application.casos_de_uso import CasosDeUsoDoNivelamento
@@ -43,7 +44,8 @@ class CasosDeUso:
 
 
 class AreaDoAdm(QTabWidget):
-    """Abas do ADM: as matérias, as questões e as exceções do nivelamento."""
+    """Abas do ADM: as matérias, as questões do nivelamento, os professores e as exceções do
+    nivelamento."""
 
     def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUso) -> None:
         super().__init__()
@@ -52,13 +54,18 @@ class AreaDoAdm(QTabWidget):
         self.tela_questoes = TelaQuestoes(
             usuario, consulta_de_materias, casos_de_uso.nivelamento
         )
+        self.tela_professores = TelaProfessores(
+            usuario, casos_de_uso.identidade, consulta_de_materias
+        )
         self.tela_excecoes = TelaExcecoes(
             usuario, consulta_de_materias, casos_de_uso.nivelamento
         )
         self.addTab(self.tela_materias, "Matérias")
         self.addTab(self.tela_questoes, "Questões do nivelamento")
+        self.addTab(self.tela_professores, "Professores")
         self.addTab(self.tela_excecoes, "Exceções do nivelamento")
         self.tela_materias.materias_mudaram.connect(self.tela_questoes.recarregar_materias)
+        self.tela_materias.materias_mudaram.connect(self.tela_professores.recarregar)
         self.tela_materias.materias_mudaram.connect(self.tela_excecoes.recarregar_materias)
 
 

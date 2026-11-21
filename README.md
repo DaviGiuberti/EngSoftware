@@ -39,6 +39,8 @@ Na primeira vez, o app pede o e-mail e a senha do ADM, que administra a platafor
 
 O ADM começa pelas matérias: na aba "Matérias", cadastra cada uma com o número de níveis, a nota mínima de cada nível a partir do N2 (as faixas do nivelamento) e a mensalidade. Na aba "Questões do nivelamento", cadastra as questões de cada matéria, com 5 alternativas e uma correta.
 
+Na aba "Professores", o ADM cria a conta de cada professor, com e-mail e senha, e o habilita nas matérias em que ele pode dar aula. Habilitado numa matéria, o professor dá aula em todos os níveis dela. O professor entra na tela de entrar com o e-mail e a senha que o ADM definiu.
+
 O aluno vê em "Meus níveis" o nível dele em cada matéria e faz o nivelamento das matérias que ainda não têm nível. O teste tem 60 minutos, que só correm com ele aberto: quem sai no meio continua depois de onde parou. Na aba "Exceções do nivelamento", o ADM dá mais tempo a um aluno que está fazendo o teste ou libera que ele refaça o nivelamento uma vez.
 
 A barra de status mostra "Banco: ok" quando o banco foi criado ou atualizado e respondeu. Veja [onde ficam os dados](#onde-ficam-os-dados).
