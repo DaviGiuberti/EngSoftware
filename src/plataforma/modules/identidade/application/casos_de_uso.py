@@ -1,6 +1,7 @@
 """Casos de uso da identidade (H38): cadastrar aluno, criar o primeiro ADM e entrar."""
 
 import secrets
+from dataclasses import dataclass
 
 from plataforma.compartilhado.transacao import Transacao
 from plataforma.modules.identidade.application.portas import RepositorioDeUsuarios
@@ -54,6 +55,15 @@ class Entrar:
 
     def executar(self, email: str, senha: str) -> Usuario:
         return autenticar(self._usuarios.buscar_credencial(normalizar_email(email)), senha)
+
+
+@dataclass(frozen=True)
+class CasosDeUsoDaIdentidade:
+    """Os casos de uso do módulo, montados pelo main.py e entregues às telas."""
+
+    cadastrar_aluno: CadastrarAluno
+    entrar: Entrar
+    criar_primeiro_adm: CriarPrimeiroAdm
 
 
 def _adicionar_usuario(
