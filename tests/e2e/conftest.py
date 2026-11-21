@@ -22,17 +22,30 @@ class App:
     def __init__(self, qtbot: QtBot, pasta_de_dados: Path) -> None:
         self._qtbot = qtbot
         self.pasta_de_dados = pasta_de_dados
+        # O qtbot só guarda uma referência fraca da janela. Sem esta lista, uma janela que
+        # nenhuma variável do teste segura seria apagada no meio do teste.
+        self._janelas: list[JanelaPrincipal] = []
 
     def abrir(self) -> JanelaPrincipal:
         janela = criar_janela(self.pasta_de_dados)
+        self._janelas.append(janela)
         self._qtbot.addWidget(janela)
         with self._qtbot.waitExposed(janela):
             janela.show()
         return janela
 
     def digitar(self, campo: QLineEdit | QPlainTextEdit, texto: str) -> None:
+        """Escreve no campo como se o texto fosse colado.
+
+        O qtbot.keyClicks derruba o processo, sem traceback, com letras acentuadas como o
+        "í" de "Física" (QTest do Qt 6.12 no Windows), e o app é todo em português.
+        """
+        campo.setFocus()
         campo.clear()
-        self._qtbot.keyClicks(campo, texto)
+        if isinstance(campo, QLineEdit):
+            campo.insert(texto)
+        else:
+            campo.insertPlainText(texto)
 
     def clicar(self, botao: QAbstractButton) -> None:
         self._qtbot.mouseClick(botao, Qt.MouseButton.LeftButton)
