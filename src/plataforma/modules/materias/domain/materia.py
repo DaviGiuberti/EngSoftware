@@ -29,6 +29,10 @@ class FaixasInvalidas(Recusa):
     """R40: a mensagem diz qual nota mínima está errada."""
 
 
+class MateriaNaoEncontrada(Recusa):
+    mensagem = "Matéria não encontrada."
+
+
 @dataclass(frozen=True)
 class Faixa:
     """R02: intervalo de nota do nivelamento que leva a um nível, como 40–69% → N2."""
