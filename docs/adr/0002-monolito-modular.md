@@ -11,7 +11,8 @@ Um único aplicativo, com um só executável, dividido em módulos por assunto d
 | Módulo | Cuida de |
 |---|---|
 | `identidade` | login, perfis e permissões |
-| `nivelamento` | teste de nivelamento e promoção |
+| `materias` | matérias, com os níveis, as faixas do nivelamento e a mensalidade |
+| `nivelamento` | questões, teste de nivelamento, nível do aluno e promoção |
 | `turmas` | turmas, matrícula, presença e notas |
 | `catalogo` | pacotes e aulas gravadas |
 | `vendas` | compra e reembolso |
@@ -35,3 +36,6 @@ Regras:
 - As regras são testadas sem banco e sem mocks, porque são funções puras.
 - Há mais pastas e arquivos (portas e implementações) do que num app simples dividido só por camadas.
 - O import-linter também consegue proibir que um módulo importe a `infra/` de outro, o que protege a regra das tabelas. Se essa checagem vai entrar: A DEFINIR.
+
+## Atualização de 2026-11-21: módulo materias
+A Matéria ganhou um módulo próprio, `materias`, na fatia 2. Ela é usada pelo nivelamento (faixas), pelas turmas (nível máximo e mensalidade) e pelos pacotes, e o EventStorming já a tratava como um agregado próprio. Deixá-la no `nivelamento` faria as turmas e os pacotes perguntarem a mensalidade ao nivelamento. As questões ficam no `nivelamento`, como no agregado Nivelamento do EventStorming. Os outros módulos consultam a matéria por uma função pública do `materias`, sem ler as tabelas dele.

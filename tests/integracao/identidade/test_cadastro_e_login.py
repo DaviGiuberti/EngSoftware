@@ -1,14 +1,10 @@
 """Cadastro, login e primeiro ADM com o banco SQLite (H38): RNF06, RNF08 e R39."""
 
 import sqlite3
-from collections.abc import Iterator
-from contextlib import closing
-from functools import partial
-from pathlib import Path
 
 import pytest
 
-from plataforma.banco import PASTA_MIGRACOES, aplicar_migracoes, conectar, transacao
+from plataforma.compartilhado.transacao import Transacao
 from plataforma.modules.identidade.application.casos_de_uso import (
     CadastrarAluno,
     CriarPrimeiroAdm,
@@ -24,24 +20,15 @@ from plataforma.modules.identidade.infra.repositorio_de_usuarios import (
 
 
 @pytest.fixture
-def conexao(tmp_path: Path) -> Iterator[sqlite3.Connection]:
-    """Banco temporário com as migrações do app, aberto do mesmo jeito que o app abre."""
-    caminho_banco = tmp_path / "plataforma.db"
-    aplicar_migracoes(caminho_banco, PASTA_MIGRACOES, tmp_path / "copias")
-    with closing(conectar(caminho_banco)) as conexao:
-        yield conexao
-
-
-@pytest.fixture
 def usuarios(conexao: sqlite3.Connection) -> RepositorioDeUsuariosSqlite:
     return RepositorioDeUsuariosSqlite(conexao)
 
 
 @pytest.fixture
 def cadastrar_aluno(
-    usuarios: RepositorioDeUsuariosSqlite, conexao: sqlite3.Connection
+    usuarios: RepositorioDeUsuariosSqlite, em_transacao: Transacao
 ) -> CadastrarAluno:
-    return CadastrarAluno(usuarios, partial(transacao, conexao))
+    return CadastrarAluno(usuarios, em_transacao)
 
 
 @pytest.fixture
@@ -51,9 +38,9 @@ def entrar(usuarios: RepositorioDeUsuariosSqlite) -> Entrar:
 
 @pytest.fixture
 def criar_primeiro_adm(
-    usuarios: RepositorioDeUsuariosSqlite, conexao: sqlite3.Connection
+    usuarios: RepositorioDeUsuariosSqlite, em_transacao: Transacao
 ) -> CriarPrimeiroAdm:
-    return CriarPrimeiroAdm(usuarios, partial(transacao, conexao))
+    return CriarPrimeiroAdm(usuarios, em_transacao)
 
 
 def emails_cadastrados(conexao: sqlite3.Connection) -> list[str]:

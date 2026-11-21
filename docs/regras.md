@@ -17,6 +17,12 @@ O nível do aluno é separado por matéria. Cada matéria define quantos níveis
 R02
 A nota do nivelamento define o nível inicial por faixas que o ADM cadastra para cada matéria (por exemplo, 0–39% → N1, 40–69% → N2, 70–100% → N3). (5.2)
 
+R40
+Cada nível da matéria tem uma faixa do nivelamento, e as faixas cobrem de 0% a 100% sem buraco nem sobreposição. A faixa do N1 começa em 0%. Para cada nível seguinte, o ADM define a nota mínima, de 1% a 100% e maior que a do nível anterior. Cada faixa vai até 1 ponto abaixo da nota mínima do nível seguinte, e a do nível máximo vai até 100%. (H27)
+
+R41
+Cada questão do nivelamento tem exatamente 5 alternativas, de A a E, e só uma delas é a correta. (H28)
+
 R03 *(alterada)*
 O nivelamento é feito uma única vez por matéria, só por quem ainda não tem nível nela. Não existe mais a espera de 30 dias para refazer; só o ADM pode liberar que o aluno refaça (R30). (3.3, 8.1)
 

@@ -14,7 +14,7 @@ from plataforma.banco import (
     transacao,
     verificar_banco,
 )
-from plataforma.janela_principal import JanelaPrincipal
+from plataforma.janela_principal import CasosDeUso, JanelaPrincipal
 from plataforma.log import configurar_log, fechar_log
 from plataforma.modules.identidade.application.casos_de_uso import (
     CadastrarAluno,
@@ -24,6 +24,22 @@ from plataforma.modules.identidade.application.casos_de_uso import (
 )
 from plataforma.modules.identidade.infra.repositorio_de_usuarios import (
     RepositorioDeUsuariosSqlite,
+)
+from plataforma.modules.materias.application.casos_de_uso import (
+    CadastrarMateria,
+    CasosDeUsoDeMaterias,
+    ConsultaDeMaterias,
+)
+from plataforma.modules.materias.infra.repositorio_de_materias import (
+    RepositorioDeMateriasSqlite,
+)
+from plataforma.modules.nivelamento.application.casos_de_uso import (
+    CadastrarQuestao,
+    CasosDeUsoDoNivelamento,
+    ListarQuestoes,
+)
+from plataforma.modules.nivelamento.infra.repositorio_de_questoes import (
+    RepositorioDeQuestoesSqlite,
 )
 
 
@@ -45,10 +61,23 @@ def criar_janela(pasta_de_dados: Path) -> JanelaPrincipal:
     em_transacao = partial(transacao, conexao)
 
     usuarios = RepositorioDeUsuariosSqlite(conexao)
-    identidade = CasosDeUsoDaIdentidade(
-        cadastrar_aluno=CadastrarAluno(usuarios, em_transacao),
-        entrar=Entrar(usuarios),
-        criar_primeiro_adm=CriarPrimeiroAdm(usuarios, em_transacao),
+    materias = RepositorioDeMateriasSqlite(conexao)
+    consulta_de_materias = ConsultaDeMaterias(materias)
+    questoes = RepositorioDeQuestoesSqlite(conexao)
+    casos_de_uso = CasosDeUso(
+        identidade=CasosDeUsoDaIdentidade(
+            cadastrar_aluno=CadastrarAluno(usuarios, em_transacao),
+            entrar=Entrar(usuarios),
+            criar_primeiro_adm=CriarPrimeiroAdm(usuarios, em_transacao),
+        ),
+        materias=CasosDeUsoDeMaterias(
+            cadastrar_materia=CadastrarMateria(materias, em_transacao),
+            consulta=consulta_de_materias,
+        ),
+        nivelamento=CasosDeUsoDoNivelamento(
+            cadastrar_questao=CadastrarQuestao(questoes, consulta_de_materias, em_transacao),
+            listar_questoes=ListarQuestoes(questoes),
+        ),
     )
 
     def ao_fechar() -> None:
@@ -56,7 +85,7 @@ def criar_janela(pasta_de_dados: Path) -> JanelaPrincipal:
         fechar_log()
 
     return JanelaPrincipal(
-        banco_ok=verificar_banco(caminho_banco), identidade=identidade, ao_fechar=ao_fechar
+        banco_ok=verificar_banco(caminho_banco), casos_de_uso=casos_de_uso, ao_fechar=ao_fechar
     )
 
 

@@ -28,8 +28,11 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Nível máximo | Último nível de uma matéria. Ser aprovado nele conclui a trilha (R09). | `nivel_maximo` |
 | Trilha | Sequência de níveis de uma matéria, do N1 ao nível máximo, percorrida um nível por vez (R09). | `Trilha` |
 | Nivelamento | Prova de múltipla escolha, feita na plataforma uma vez por matéria, que define o nível inicial do aluno. Tem 60 minutos (R03, R30). | `Nivelamento` |
-| Questão | Pergunta de múltipla escolha do nivelamento, com uma alternativa correta, cadastrada pelo ADM. | `Questao` |
-| Faixa | Intervalo de nota do nivelamento ligado a um nível, como 40–69% → N2. O ADM cadastra as faixas de cada matéria (R02). | `Faixa` |
+| Questão | Pergunta de múltipla escolha do nivelamento, com 5 alternativas e uma só correta, cadastrada pelo ADM (R41). | `Questao` |
+| Alternativa | Uma das 5 respostas de uma questão, de A a E. Só uma é a correta (R41). | `Alternativa` |
+| Nota do nivelamento | Porcentagem de acertos sobre o total de questões, arredondada para baixo. Questão sem resposta conta como erro (R34). | `nota` |
+| Faixa | Intervalo de nota do nivelamento ligado a um nível, como 40–69% → N2. Cada nível da matéria tem uma, e elas cobrem de 0% a 100% (R02, R40). | `Faixa` |
+| Nota mínima | Menor nota do nivelamento que coloca o aluno num nível. O ADM define a de cada nível a partir do N2; a do N1 é sempre 0% (R40). | `nota_minima` |
 
 ## Turmas e etapas
 
