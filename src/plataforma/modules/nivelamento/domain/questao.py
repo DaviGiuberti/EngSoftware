@@ -46,9 +46,27 @@ class Questao:
     alternativas: tuple[Alternativa, ...]
 
     @property
+    def posicao_da_correta(self) -> int:
+        """0 é a A, e 4 é a E."""
+        return next(i for i, alternativa in enumerate(self.alternativas) if alternativa.correta)
+
+    @property
     def letra_da_correta(self) -> str:
-        indice = next(i for i, alternativa in enumerate(self.alternativas) if alternativa.correta)
-        return LETRAS_DAS_ALTERNATIVAS[indice]
+        return LETRAS_DAS_ALTERNATIVAS[self.posicao_da_correta]
+
+
+@dataclass(frozen=True)
+class QuestaoParaResponder:
+    """A questão como o aluno a vê: sem dizer qual alternativa é a correta."""
+
+    id: int
+    enunciado: str
+    alternativas: tuple[str, ...]
+
+
+def para_responder(questao: Questao) -> QuestaoParaResponder:
+    textos = tuple(alternativa.texto for alternativa in questao.alternativas)
+    return QuestaoParaResponder(questao.id, questao.enunciado, textos)
 
 
 def nova_questao(
