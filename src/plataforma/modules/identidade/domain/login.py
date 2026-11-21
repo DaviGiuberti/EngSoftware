@@ -8,10 +8,9 @@ from plataforma.modules.identidade.domain.usuario import Usuario
 
 
 class LoginInvalido(Recusa):
-    def __init__(self) -> None:
-        # A mesma mensagem para e-mail sem cadastro e para senha errada: assim a tela não
-        # revela quais e-mails têm conta.
-        super().__init__("E-mail ou senha incorretos.")
+    # A mesma mensagem para e-mail sem cadastro e para senha errada: assim a tela não
+    # revela quais e-mails têm conta.
+    mensagem = "E-mail ou senha incorretos."
 
 
 @dataclass(frozen=True)

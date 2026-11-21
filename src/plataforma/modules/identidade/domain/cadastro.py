@@ -4,18 +4,15 @@ from plataforma.compartilhado.recusa import Recusa
 
 
 class EmailInvalido(Recusa):
-    def __init__(self) -> None:
-        super().__init__("Informe um e-mail válido, como ana@exemplo.com.")
+    mensagem = "Informe um e-mail válido, como ana@exemplo.com."
 
 
 class EmailJaCadastrado(Recusa):
-    def __init__(self) -> None:
-        super().__init__("Este e-mail já está cadastrado.")
+    mensagem = "Este e-mail já está cadastrado."
 
 
 class PrimeiroAdmJaCriado(Recusa):
-    def __init__(self) -> None:
-        super().__init__("O primeiro ADM já foi criado.")
+    mensagem = "O primeiro ADM já foi criado."
 
 
 def normalizar_email(email: str) -> str:
@@ -25,8 +22,9 @@ def normalizar_email(email: str) -> str:
 
 def validar_email(email: str) -> None:
     """Recusa o que não tem a forma nome@domínio, com um só @ e sem espaços."""
-    nome, arroba, dominio = email.partition("@")
-    if not (nome and arroba and dominio) or "@" in dominio or any(c.isspace() for c in email):
+    # Sem @, o partition devolve o domínio vazio, e a primeira checagem já recusa.
+    nome, _, dominio = email.partition("@")
+    if not nome or not dominio or "@" in dominio or any(c.isspace() for c in email):
         raise EmailInvalido()
 
 

@@ -9,8 +9,7 @@ TAMANHO_MINIMO_DA_SENHA = 8
 
 
 class SenhaCurta(Recusa):
-    def __init__(self) -> None:
-        super().__init__(f"A senha precisa ter pelo menos {TAMANHO_MINIMO_DA_SENHA} caracteres.")
+    mensagem = f"A senha precisa ter pelo menos {TAMANHO_MINIMO_DA_SENHA} caracteres."
 
 
 def validar_senha(senha: str) -> None:
