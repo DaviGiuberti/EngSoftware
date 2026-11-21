@@ -1,15 +1,31 @@
-"""Fixtures dos testes de integração: um banco SQLite temporário com as migrações do app."""
+"""Fixtures dos testes de integração: um banco SQLite temporário com as migrações do app e um
+relógio que só anda quando o teste manda."""
 
 import sqlite3
 from collections.abc import Iterator
 from contextlib import closing
+from datetime import datetime, timedelta
 from functools import partial
 from pathlib import Path
 
 import pytest
 
 from plataforma.banco import PASTA_MIGRACOES, aplicar_migracoes, conectar, transacao
+from plataforma.compartilhado.horario import BRASILIA
 from plataforma.compartilhado.transacao import Transacao
+
+
+class RelogioDeTeste:
+    """Relógio falso: fica parado, e o teste o avança quando quiser."""
+
+    def __init__(self, inicio: datetime) -> None:
+        self._agora = inicio
+
+    def agora(self) -> datetime:
+        return self._agora
+
+    def avancar(self, **intervalo: float) -> None:
+        self._agora += timedelta(**intervalo)
 
 
 @pytest.fixture
@@ -25,3 +41,8 @@ def conexao(tmp_path: Path) -> Iterator[sqlite3.Connection]:
 def em_transacao(conexao: sqlite3.Connection) -> Transacao:
     """A transação que os casos de uso recebem, nessa mesma conexão (RNF05)."""
     return partial(transacao, conexao)
+
+
+@pytest.fixture
+def relogio() -> RelogioDeTeste:
+    return RelogioDeTeste(datetime(2026, 11, 23, 14, 0, tzinfo=BRASILIA))
