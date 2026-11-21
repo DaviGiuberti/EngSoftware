@@ -1,8 +1,13 @@
 # Regras de negócio
 
-Regras decididas pelo autor: a lista original, as respostas da entrevista de 16/11/2026, registrada em [ia/grill-me-regras.md](ia/grill-me-regras.md), e as regras R34 a R38, que surgiram ao escrever os critérios das [histórias](historias.md). Entre parênteses, a pergunta da entrevista ou a história que originou ou mudou a regra.
+Regras decididas pelo autor: a lista original, as respostas da entrevista de 16/11/2026, registrada em [ia/grill-me-regras.md](ia/grill-me-regras.md), e as regras a partir da R34, que surgiram ao escrever os critérios das [histórias](historias.md) e ao começar a implementá-las. Entre parênteses, a pergunta da entrevista ou a história que originou ou mudou a regra.
 
 Os números não mudam: uma regra alterada mantém o número, e as regras novas começam na R17. Regras marcadas com **[Fora do MVP]** ficam documentadas, mas não entram na entrega de 02/12/2026.
+
+## Usuários e perfis
+
+R39
+Cada e-mail tem uma única conta na plataforma, com um único perfil. O cadastro recusa um e-mail que já está em uso, sem diferenciar maiúsculas de minúsculas. (H38)
 
 ## Matérias, níveis e nivelamento
 

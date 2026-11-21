@@ -936,6 +936,41 @@ Cenário: R14 — só o ADM cria cupons
   Então o sistema recusa
 ```
 
+## Todos os perfis
+
+### H38 · Cadastrar-se e entrar na plataforma
+
+Como aluno, quero me cadastrar com e-mail e senha e entrar na plataforma para fazer o nivelamento e estudar no meu nível. Professor e ADM entram do mesmo jeito, e o primeiro ADM é criado na primeira vez que o app abre. Prioridade: Alta. Regras: R39, RNF06, RNF07.
+
+```gherkin
+Cenário: RNF06 — senha com menos de 8 caracteres
+  Dado um visitante na tela de cadastro
+  Quando ele tenta se cadastrar como aluno com a senha "abc1234", de 7 caracteres
+  Então o sistema recusa, informando que a senha precisa ter pelo menos 8 caracteres
+
+Cenário: RNF06 — senha com 8 caracteres
+  Dado um visitante na tela de cadastro
+  Quando ele se cadastra como aluno com o e-mail "ana@exemplo.com" e a senha "abcd1234", de 8 caracteres
+  Então ele entra na plataforma com esse e-mail e essa senha, com o perfil de aluno
+  E o valor guardado no banco para a senha é diferente de "abcd1234"
+
+Cenário: R39 — e-mail já cadastrado
+  Dada Ana, cadastrada com o e-mail "ana@exemplo.com"
+  Quando alguém tenta se cadastrar com o e-mail "Ana@Exemplo.com"
+  Então o sistema recusa, informando que o e-mail já está cadastrado
+
+Cenário: RNF07 — aluno chamando caso de uso do ADM
+  Dada Ana, que entrou na plataforma como aluno
+  Quando ela tenta usar uma ação do ADM, como cadastrar matéria
+  Então o sistema recusa, informando que só o ADM pode cadastrar matéria
+
+Cenário: primeiro ADM
+  Dado o app aberto pela primeira vez, sem nenhum ADM
+  Quando a pessoa define o e-mail "adm@exemplo.com" e a senha "admin123"
+  Então ela entra na plataforma com o perfil de ADM
+  E, nas próximas vezes, o app abre direto na tela de entrar
+```
+
 ## Rastreabilidade
 
 Toda regra do regras.md é testada por pelo menos um critério.
@@ -980,3 +1015,4 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R36 | H12 |
 | R37 | H07 |
 | R38 | H34 |
+| R39 | H38 |
