@@ -29,6 +29,9 @@ O nivelamento é feito uma única vez por matéria, só por quem ainda não tem 
 R30
 O nivelamento tem 60 minutos de prova, e o tempo só corre com o teste aberto. Se o aluno fechar o navegador ou a conexão cair, ele retoma de onde parou. O ADM pode dar mais tempo a um aluno ou liberar que ele refaça. (17.3, 18.4, 19.2, 19.3)
 
+R42
+Quando o ADM libera e o aluno refaz o nivelamento, o nível só muda se o resultado novo for maior. Se for igual ou menor, o aluno continua no nível que tinha. (H33)
+
 R34
 A nota do nivelamento é a porcentagem de acertos sobre o total de questões, arredondada para baixo (39,9% vira 39%). Questão sem resposta conta como erro. Quando os 60 minutos acabam, o teste é encerrado e corrigido com o que foi respondido. (H01)
 

@@ -30,6 +30,9 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Nivelamento | Prova de múltipla escolha, feita na plataforma uma vez por matéria, que define o nível inicial do aluno. Tem 60 minutos (R03, R30). | `Nivelamento` |
 | Questão | Pergunta de múltipla escolha do nivelamento, com 5 alternativas e uma só correta, cadastrada pelo ADM (R41). | `Questao` |
 | Alternativa | Uma das 5 respostas de uma questão, de A a E. Só uma é a correta (R41). | `Alternativa` |
+| Resposta | Alternativa que o aluno marcou numa questão do nivelamento. Questão sem resposta conta como erro (R34). | `respostas` |
+| Tempo extra | Minutos a mais que o ADM dá a um aluno que está fazendo o nivelamento (R30). | `tempo_extra` |
+| Liberação para refazer | Permissão do ADM para o aluno refazer o nivelamento de uma matéria. Vale para uma tentativa, e o nível só muda se o resultado for maior (R03, R42). | `refazer_liberado` |
 | Nota do nivelamento | Porcentagem de acertos sobre o total de questões, arredondada para baixo. Questão sem resposta conta como erro (R34). | `nota` |
 | Faixa | Intervalo de nota do nivelamento ligado a um nível, como 40–69% → N2. Cada nível da matéria tem uma, e elas cobrem de 0% a 100% (R02, R40). | `Faixa` |
 | Nota mínima | Menor nota do nivelamento que coloca o aluno num nível. O ADM define a de cada nível a partir do N2; a do N1 é sempre 0% (R40). | `nota_minima` |
