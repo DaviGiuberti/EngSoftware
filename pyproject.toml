@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plataforma"
+version = "0.1.0"
+description = "Plataforma de ensino por níveis: nivelamento, turmas ao vivo e pacotes de aulas gravadas."
+requires-python = ">=3.12"
+dependencies = ["PySide6>=6.12"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.2",
+    "pytest-qt>=4.5",
+    "pytest-cov>=7.1",
+    "ruff>=0.17",
+    "mypy>=2.4",
+    "import-linter>=2.17",
+    "pip-audit>=2.10",
+    "pyinstaller>=6.22",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+plataforma = ["migracoes/*.sql"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# S608 acusa SQL montado com f-string ou concatenação (RNF08: sempre parâmetros "?").
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "PT", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.ruff.lint.isort]
+# Sem isto, o ruff trata como de terceiros o import de um módulo do projeto que ainda
+# não existe (fase vermelha do TDD) e acusa a ordem dos imports (I001).
+known-first-party = ["plataforma"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+qt_api = "pyside6"
+addopts = ["--import-mode=importlib"]
+
+[tool.coverage.run]
+source = ["plataforma"]
+branch = true
+
+[tool.importlinter]
+root_package = "plataforma"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "domain/ não importa infra/, ui/, sqlite3 nem PySide6"
+type = "forbidden"
+source_modules = ["plataforma.modules.*.domain"]
+forbidden_modules = [
+    "plataforma.modules.*.infra",
+    "plataforma.modules.*.ui",
+    "sqlite3",
+    "PySide6",
+]

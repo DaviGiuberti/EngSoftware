@@ -1,0 +1,7 @@
+-- 0001: versão inicial do banco, ainda sem tabelas.
+--
+-- Convenções das migrações:
+-- - O nome é NNNN_descricao.sql, com 4 dígitos. As migrações rodam em ordem numérica.
+-- - A descrição começa pelo módulo dono das tabelas, por exemplo 0002_identidade_usuario.sql.
+-- - Não use BEGIN, COMMIT nem ROLLBACK: cada arquivo já roda numa transação.
+-- - Uma migração que já foi aplicada não é editada. Qualquer mudança entra numa migração nova.

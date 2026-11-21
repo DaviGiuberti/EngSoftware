@@ -2,7 +2,7 @@
 
 Histórias da plataforma, escritas a partir do [regras.md](regras.md) e do [visao.md](visao.md). Os termos seguem o glossário [CONTEXT.md](../CONTEXT.md).
 
-Formato: Como [perfil], quero [ação] para [benefício]. Cada história tem prioridade e cita as regras que usa. Quando a história depende de uma sugestão do regras.md que ainda aguarda decisão, ela indica qual.
+Formato: Como [perfil], quero [ação] para [benefício]. Cada história tem prioridade e cita as regras que usa.
 
 Prioridade:
 
@@ -20,13 +20,13 @@ Dados usados nos exemplos, quando o critério não diz outra coisa:
 - **Matemática:** 5 níveis (N1 a N5), faixas 0–19% → N1, 20–39% → N2, 40–59% → N3, 60–79% → N4 e 80–100% → N5, mensalidade de R$ 250.
 - **Professores:** Carlos, habilitado em Física; Dora, habilitada em Física e Matemática.
 - **Alunos:** Ana e Bruno, no N2 de Física.
-- **Datas e horas:** datas sem ano são do mesmo ano; horários de Brasília (sugestão S10).
+- **Datas e horas:** datas sem ano são do mesmo ano; horários de Brasília.
 
 ## Aluno
 
 ### H01 · Fazer o nivelamento
 
-Como aluno, quero fazer o teste de nivelamento de uma matéria para começar no nível certo. Prioridade: Alta. Regras: R01, R02, R03, R30. Depende da sugestão S21.
+Como aluno, quero fazer o teste de nivelamento de uma matéria para começar no nível certo. Prioridade: Alta. Regras: R01, R02, R03, R30, R34.
 
 ```gherkin
 Cenário: R02 — 39% coloca o aluno no N1
@@ -50,7 +50,7 @@ Cenário: R03 — o nivelamento é feito uma vez por matéria
   Quando ele tenta iniciar o nivelamento de Física
   Então o sistema recusa, informando que o nivelamento de Física já foi feito
 
-Cenário: R30 — os 60 minutos acabam
+Cenário: R34 — os 60 minutos acabam
   Dado um aluno no nivelamento de Física com 18 de 30 questões respondidas e 60 minutos usados
   Quando o tempo acaba
   Então o teste é encerrado e corrigido com as 18 respostas dadas
@@ -156,7 +156,7 @@ Cenário: R05 — turma com vaga não tem lista de espera
 
 ### H06 · Confirmar a vaga da lista de espera
 
-Como aluno na lista de espera, quero ser avisado na plataforma quando abrir uma vaga e confirmá-la em até 72 horas para não perder a minha vez. Prioridade: Média. Regras: R05. Depende das sugestões S17 e S22.
+Como aluno na lista de espera, quero ser avisado na plataforma quando abrir uma vaga e confirmá-la em até 72 horas para não perder a minha vez. Prioridade: Média. Regras: R05, R35.
 
 ```gherkin
 Cenário: R05 — abre vaga e o 1º da lista é avisado
@@ -184,7 +184,7 @@ Cenário: R05 — o prazo vence e a vaga passa para o próximo
 
 ### H07 · Pagar a mensalidade
 
-Como aluno, quero pagar a mensalidade da turma e ver quando vence a próxima para não perder a vaga por atraso. Prioridade: Média. Regras: R27, R28. Depende da sugestão S23.
+Como aluno, quero pagar a mensalidade da turma e ver quando vence a próxima para não perder a vaga por atraso. Prioridade: Média. Regras: R27, R28, R37.
 
 ```gherkin
 Cenário: R27 — vencimento no dia da matrícula
@@ -234,7 +234,7 @@ Cenário: R08 — limite de faltas ultrapassado
 
 ### H09 · Promoção de nível
 
-Como aluno, quero ser promovido ao próximo nível no fim da etapa quando cumprir os requisitos, para avançar na trilha. Prioridade: Alta. Regras: R08, R09, R17. Depende da sugestão S20.
+Como aluno, quero ser promovido ao próximo nível no fim da etapa quando cumprir os requisitos, para avançar na trilha. Prioridade: Alta. Regras: R08, R09, R17.
 
 ```gherkin
 Cenário: R08 — 6 faltas e nota 7 promovem
@@ -322,7 +322,7 @@ Cenário: R19 e R21 — o reprovado entra em outra turma do mesmo nível no meio
 
 ### H12 · Receber certificados de nível e de trilha
 
-Como aluno, quero receber um certificado ao ser promovido e outro ao concluir a trilha, para comprovar meu progresso. Prioridade: Média. Regras: R33. Depende da sugestão S24.
+Como aluno, quero receber um certificado ao ser promovido e outro ao concluir a trilha, para comprovar meu progresso. Prioridade: Média. Regras: R33, R36.
 
 ```gherkin
 Cenário: R33 — certificado de nível na promoção
@@ -330,7 +330,7 @@ Cenário: R33 — certificado de nível na promoção
   Quando ele é promovido para o N2
   Então ele recebe o certificado de nível do N1 de Física
 
-Cenário: R33 — certificados no nível máximo
+Cenário: R36 — certificados no nível máximo
   Dado um aluno no N3 de Física, o nível máximo
   Quando ele é aprovado na etapa do N3
   Então ele recebe o certificado de nível do N3 e o certificado de trilha de Física
@@ -443,7 +443,7 @@ Cenário: R32 — concluir um pacote não promove
 
 ### H17 · Pedir reembolso de um pacote
 
-Como aluno, quero pedir reembolso de um pacote até o 7º dia depois da compra para recuperar o dinheiro se ele não me servir. Prioridade: Média. Regras: R12, R13. Depende da sugestão S09.
+Como aluno, quero pedir reembolso de um pacote até o 7º dia depois da compra para recuperar o dinheiro se ele não me servir. Prioridade: Média. Regras: R12, R13.
 
 ```gherkin
 Cenário: R13 — pedido no último minuto do 7º dia
@@ -609,7 +609,7 @@ Cenário: R23 — aluno sem nota continua na turma
 
 ### H24 · Corrigir presença ou nota
 
-Como professor, quero corrigir uma presença ou nota até 72 horas depois de lançá-la para consertar um erro sem depender do ADM. Prioridade: Média. Regras: R22. Depende da sugestão S20.
+Como professor, quero corrigir uma presença ou nota até 72 horas depois de lançá-la para consertar um erro sem depender do ADM. Prioridade: Média. Regras: R22.
 
 ```gherkin
 Cenário: R22 — correção dentro de 72 horas
@@ -680,7 +680,7 @@ Cenário: R15 — o preço continua com o ADM
 
 ### H27 · Cadastrar matéria
 
-Como ADM, quero cadastrar uma matéria com seus níveis, as faixas de nota do nivelamento e o valor da mensalidade para que o teste coloque o aluno no nível certo e as turmas possam ser cobradas. Prioridade: Alta. Regras: R01, R02, R27. Depende da sugestão S19.
+Como ADM, quero cadastrar uma matéria com seus níveis, as faixas de nota do nivelamento e o valor da mensalidade para que o teste coloque o aluno no nível certo e as turmas possam ser cobradas. Prioridade: Alta. Regras: R01, R02, R27.
 
 ```gherkin
 Cenário: R01 — cada matéria define quantos níveis tem
@@ -769,7 +769,7 @@ Cenário: R24 — o horário não muda
 
 ### H31 · Trocar o professor de uma turma
 
-Como ADM, quero trocar o professor de uma turma quando ele sair ou for desligado para que a turma não fique sem responsável. Prioridade: Média. Regras: R07, R11, R26. Depende da sugestão S07.
+Como ADM, quero trocar o professor de uma turma quando ele sair ou for desligado para que a turma não fique sem responsável. Prioridade: Média. Regras: R07, R11, R26.
 
 ```gherkin
 Cenário: R26 — troca quando o professor sai
@@ -819,7 +819,7 @@ Cenário: R22 — correção do ADM que reprova quem já foi promovido
 
 ### H33 · Abrir exceções no nivelamento
 
-Como ADM, quero liberar que um aluno refaça o nivelamento ou dar mais tempo a ele para resolver casos excepcionais, como um problema técnico durante o teste. Prioridade: Média. Regras: R03, R30. Depende da sugestão S25.
+Como ADM, quero liberar que um aluno refaça o nivelamento ou dar mais tempo a ele para resolver casos excepcionais, como um problema técnico durante o teste. Prioridade: Média. Regras: R03, R30.
 
 ```gherkin
 Cenário: R30 — mais tempo de prova
@@ -840,7 +840,7 @@ Cenário: R03 — a liberação vale para uma tentativa
 
 ### H34 · Revisar e publicar pacote
 
-Como ADM, quero revisar um pacote enviado, definir o preço e publicá-lo ou devolvê-lo ao professor para garantir a qualidade do que é vendido. Prioridade: Alta. Regras: R15. Depende da sugestão S26.
+Como ADM, quero revisar um pacote enviado, definir o preço e publicá-lo ou devolvê-lo ao professor para garantir a qualidade do que é vendido. Prioridade: Alta. Regras: R15, R38.
 
 ```gherkin
 Cenário: R15 — o ADM define o preço e publica
@@ -848,7 +848,7 @@ Cenário: R15 — o ADM define o preço e publica
   Quando o ADM define o preço de R$ 120 e publica o pacote
   Então o pacote fica publicado e aparece na vitrine por R$ 120
 
-Cenário: R15 — o ADM devolve o pacote
+Cenário: R38 — o ADM devolve o pacote
   Dado o pacote "Cinemática" em revisão
   Quando o ADM devolve o pacote
   Então o pacote volta para rascunho
@@ -867,7 +867,7 @@ Cenário: R15 — o ADM altera o preço
 
 ### H35 · Arquivar e publicar de novo
 
-Como ADM, quero arquivar um pacote e, se quiser, publicá-lo de novo, para tirá-lo da vitrine sem prejudicar quem já comprou. Prioridade: Média. Regras: R12, R15. Depende da sugestão S18.
+Como ADM, quero arquivar um pacote e, se quiser, publicá-lo de novo, para tirá-lo da vitrine sem prejudicar quem já comprou. Prioridade: Média. Regras: R12, R15.
 
 ```gherkin
 Cenário: R15 — pacote arquivado sai da vitrine
@@ -888,7 +888,7 @@ Cenário: R15 — o ADM publica de novo um pacote arquivado
 
 ### H36 · Ver as métricas
 
-Como ADM, quero ver as métricas M1, M2 e M3 do período para saber se a plataforma está resolvendo o problema do aluno. Prioridade: Alta. Regras: nenhuma (vem da seção 4 do visao.md). Depende da sugestão S01.
+Como ADM, quero ver as métricas M1, M2 e M3 do período para saber se a plataforma está resolvendo o problema do aluno. Prioridade: Alta. Regras: nenhuma (vem da seção 4 do visao.md).
 
 ```gherkin
 Cenário: M1 — taxa de progressão
@@ -975,3 +975,8 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R31 | H14, H15 |
 | R32 | H16 |
 | R33 | H12 |
+| R34 | H01 |
+| R35 | H06 |
+| R36 | H12 |
+| R37 | H07 |
+| R38 | H34 |

@@ -1,0 +1,52 @@
+# Roda em todo PR e em todo push na main. A Definition of Done pede que ela passe antes do merge.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  qualidade:
+    # Windows, o mesmo sistema em que o app roda (RNF03).
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      # A saída das ferramentas em UTF-8, para os acentos aparecerem certos no log e um
+      # caractere fora do cp1252 não derrubar o passo. Não muda como o app lê arquivos.
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Instalar dependências
+        run: python -m pip install -e ".[dev]"
+
+      # Um comando por passo: no PowerShell da CI, só o código de saída do último comando
+      # de um passo decide se ele falha.
+      - name: Lint (RNF13)
+        run: ruff check .
+
+      - name: Typecheck (RNF13)
+        run: mypy src
+
+      - name: Teste de arquitetura (RNF12)
+        run: lint-imports
+
+      - name: Testes com cobertura
+        run: pytest --cov --cov-report=term-missing
+
+      - name: Cobertura do domain/ de pelo menos 90% (RNF11)
+        run: coverage report --include="*/modules/*/domain/*" --fail-under=90
+
+      - name: Dependências sem vulnerabilidade conhecida (RNF09)
+        # O próprio app não está no PyPI, por isso fica de fora da busca.
+        run: pip-audit --skip-editable
