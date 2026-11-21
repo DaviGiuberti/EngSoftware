@@ -1,5 +1,5 @@
 ## O que muda
-Fecha #<número da issue>
+Closes #<número da issue>
 
 ## Como testar
 
