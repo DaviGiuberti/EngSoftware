@@ -1,4 +1,4 @@
-"""Tela do ADM para cadastrar e ver as questões do nivelamento (H28)."""
+"""Telas do ADM no nivelamento: as questões (H28) e as exceções (H33)."""
 
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QRadioButton,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -19,8 +20,10 @@ from PySide6.QtWidgets import (
 from plataforma.acoes import Falhou, Feito, executar
 from plataforma.modules.identidade.domain.usuario import Usuario
 from plataforma.modules.materias.application.casos_de_uso import ConsultaDeMaterias
+from plataforma.modules.materias.ui.telas import preencher_com_materias
 from plataforma.modules.nivelamento.application.casos_de_uso import CasosDeUsoDoNivelamento
 from plataforma.modules.nivelamento.domain.questao import LETRAS_DAS_ALTERNATIVAS
+from plataforma.modules.nivelamento.ui.telas_do_aluno import formatar_tempo
 from plataforma.ui_comum import mostrar_aviso, mostrar_recusa, mostrar_sucesso, titulo
 
 
@@ -81,13 +84,7 @@ class TelaQuestoes(QWidget):
         """Atualiza a lista de matérias, mantendo a escolhida se ela ainda existir."""
         match executar("ver matérias", self._usuario.email, self._materias.listar):
             case Feito(materias):
-                escolhida = self.materia.currentData()
-                self.materia.blockSignals(True)
-                self.materia.clear()
-                for materia in materias:
-                    self.materia.addItem(materia.nome, materia.id)
-                self.materia.setCurrentIndex(max(self.materia.findData(escolhida), 0))
-                self.materia.blockSignals(False)
+                preencher_com_materias(self.materia, materias)
                 self.botao_cadastrar.setEnabled(bool(materias))
                 if materias:
                     self.mensagem.clear()
@@ -149,3 +146,101 @@ class TelaQuestoes(QWidget):
         for correta in self.corretas:
             correta.setChecked(False)
         self._grupo_das_corretas.setExclusive(True)
+
+
+class TelaExcecoes(QWidget):
+    """H33: o ADM dá mais tempo a um aluno ou libera que ele refaça o nivelamento."""
+
+    def __init__(
+        self,
+        usuario: Usuario,
+        materias: ConsultaDeMaterias,
+        casos_de_uso: CasosDeUsoDoNivelamento,
+    ) -> None:
+        super().__init__()
+        self._usuario = usuario
+        self._materias = materias
+        self._casos_de_uso = casos_de_uso
+
+        self.email = QLineEdit()
+        self.email.setPlaceholderText("ana@exemplo.com")
+        self.materia = QComboBox()
+        self.minutos = QSpinBox()
+        self.minutos.setRange(1, 240)
+        self.minutos.setValue(10)
+        self.minutos.setSuffix(" min")
+        self.botao_mais_tempo = QPushButton("Dar mais tempo")
+        self.botao_refazer = QPushButton("Liberar refazer")
+        self.mensagem = QLabel()
+        self.mensagem.setWordWrap(True)
+        explicacao = QLabel(
+            "Para casos excepcionais, como um problema técnico durante o teste. Mais tempo só "
+            "vale para quem está fazendo o nivelamento. Refazer vale para uma tentativa, e o "
+            "nível só muda se o resultado for maior."
+        )
+        explicacao.setWordWrap(True)
+
+        formulario = QFormLayout()
+        formulario.addRow("E-mail do aluno", self.email)
+        formulario.addRow("Matéria", self.materia)
+        formulario.addRow("Minutos a mais", self.minutos)
+        botoes = QHBoxLayout()
+        botoes.addWidget(self.botao_mais_tempo)
+        botoes.addWidget(self.botao_refazer)
+        coluna = QVBoxLayout(self)
+        coluna.addWidget(titulo("Exceções do nivelamento"))
+        coluna.addWidget(explicacao)
+        coluna.addLayout(formulario)
+        coluna.addLayout(botoes)
+        coluna.addWidget(self.mensagem)
+        coluna.addStretch()
+
+        self.botao_mais_tempo.clicked.connect(self._dar_mais_tempo)
+        self.botao_refazer.clicked.connect(self._liberar_refazer)
+        self.recarregar_materias()
+
+    def recarregar_materias(self) -> None:
+        match executar("ver matérias", self._usuario.email, self._materias.listar):
+            case Feito(materias):
+                preencher_com_materias(self.materia, materias)
+                # Sem matéria no combo, não há o que liberar nem a quem dar tempo.
+                self.botao_mais_tempo.setEnabled(bool(materias))
+                self.botao_refazer.setEnabled(bool(materias))
+            case Falhou(mensagem):
+                mostrar_recusa(self.mensagem, mensagem)
+
+    def _dar_mais_tempo(self) -> None:
+        email = self.email.text().strip()
+        materia_id, nome = self.materia.currentData(), self.materia.currentText()
+        minutos = self.minutos.value()
+        resultado = executar(
+            "dar mais tempo no nivelamento",
+            self._usuario.email,
+            lambda: self._casos_de_uso.dar_mais_tempo.executar(
+                self._usuario, email, materia_id, minutos
+            ),
+        )
+        match resultado:
+            case Feito(restante):
+                mostrar_sucesso(
+                    self.mensagem,
+                    f"{email} passa a ter {formatar_tempo(restante)} no nivelamento de {nome}.",
+                )
+            case Falhou(mensagem):
+                mostrar_recusa(self.mensagem, mensagem)
+
+    def _liberar_refazer(self) -> None:
+        email = self.email.text().strip()
+        materia_id, nome = self.materia.currentData(), self.materia.currentText()
+        resultado = executar(
+            "liberar refazer o nivelamento",
+            self._usuario.email,
+            lambda: self._casos_de_uso.liberar_refazer.executar(self._usuario, email, materia_id),
+        )
+        match resultado:
+            case Feito(_):
+                mostrar_sucesso(
+                    self.mensagem, f"{email} pode refazer o nivelamento de {nome} uma vez."
+                )
+            case Falhou(mensagem):
+                mostrar_recusa(self.mensagem, mensagem)

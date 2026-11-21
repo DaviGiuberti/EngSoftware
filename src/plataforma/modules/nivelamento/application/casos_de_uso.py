@@ -1,4 +1,4 @@
-"""Casos de uso do nivelamento: questões (H28)."""
+"""Casos de uso do nivelamento: questões (H28). O teste do aluno fica em fazer_nivelamento.py."""
 
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -7,6 +7,16 @@ from plataforma.compartilhado.transacao import Transacao
 from plataforma.modules.identidade.domain.autorizacao import exigir_perfil
 from plataforma.modules.identidade.domain.usuario import Perfil, Usuario
 from plataforma.modules.materias.application.casos_de_uso import ConsultaDeMaterias
+from plataforma.modules.nivelamento.application.fazer_nivelamento import (
+    ConcluirNivelamento,
+    DarMaisTempo,
+    FecharNivelamento,
+    IniciarNivelamento,
+    LiberarRefazer,
+    RegistrarTempo,
+    ResponderQuestao,
+    VerMeusNiveis,
+)
 from plataforma.modules.nivelamento.application.portas import RepositorioDeQuestoes
 from plataforma.modules.nivelamento.domain.questao import Questao, nova_questao
 
@@ -56,3 +66,11 @@ class CasosDeUsoDoNivelamento:
 
     cadastrar_questao: CadastrarQuestao
     listar_questoes: ListarQuestoes
+    iniciar: IniciarNivelamento
+    responder: ResponderQuestao
+    registrar_tempo: RegistrarTempo
+    fechar: FecharNivelamento
+    concluir: ConcluirNivelamento
+    ver_meus_niveis: VerMeusNiveis
+    dar_mais_tempo: DarMaisTempo
+    liberar_refazer: LiberarRefazer

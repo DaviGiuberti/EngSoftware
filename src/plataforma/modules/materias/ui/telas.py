@@ -1,8 +1,11 @@
 """Tela do ADM para cadastrar e ver as matérias (H27)."""
 
+from collections.abc import Sequence
+
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QComboBox,
     QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
@@ -26,6 +29,17 @@ from plataforma.ui_comum import mostrar_recusa, mostrar_sucesso, titulo
 
 NIVEIS_AO_ABRIR = 3
 MAXIMO_DE_NIVEIS_NA_TELA = 10
+
+
+def preencher_com_materias(combo: QComboBox, materias: Sequence[Materia]) -> None:
+    """Põe as matérias no combo e mantém a escolhida, se ela ainda existir, sem avisar a troca."""
+    escolhida = combo.currentData()
+    combo.blockSignals(True)
+    combo.clear()
+    for materia in materias:
+        combo.addItem(materia.nome, materia.id)
+    combo.setCurrentIndex(max(combo.findData(escolhida), 0))
+    combo.blockSignals(False)
 
 
 def descrever_faixas(materia: Materia) -> str:

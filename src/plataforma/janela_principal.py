@@ -27,12 +27,10 @@ from plataforma.modules.identidade.ui.telas import (
 from plataforma.modules.materias.application.casos_de_uso import CasosDeUsoDeMaterias
 from plataforma.modules.materias.ui.telas import TelaMaterias
 from plataforma.modules.nivelamento.application.casos_de_uso import CasosDeUsoDoNivelamento
-from plataforma.modules.nivelamento.ui.telas import TelaQuestoes
+from plataforma.modules.nivelamento.ui.telas import TelaExcecoes, TelaQuestoes
+from plataforma.modules.nivelamento.ui.telas_do_aluno import AreaDoAluno
 
-AVISO_DO_PERFIL = {
-    Perfil.ALUNO: "Em breve, aqui: o seu nível em cada matéria e o nivelamento.",
-    Perfil.PROFESSOR: "Em breve, aqui: as suas turmas.",
-}
+AVISO_DO_PROFESSOR = "Em breve, aqui: as suas turmas."
 
 
 @dataclass(frozen=True)
@@ -45,17 +43,23 @@ class CasosDeUso:
 
 
 class AreaDoAdm(QTabWidget):
-    """Abas do ADM: as matérias e as questões do nivelamento."""
+    """Abas do ADM: as matérias, as questões e as exceções do nivelamento."""
 
     def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUso) -> None:
         super().__init__()
+        consulta_de_materias = casos_de_uso.materias.consulta
         self.tela_materias = TelaMaterias(usuario, casos_de_uso.materias)
         self.tela_questoes = TelaQuestoes(
-            usuario, casos_de_uso.materias.consulta, casos_de_uso.nivelamento
+            usuario, consulta_de_materias, casos_de_uso.nivelamento
+        )
+        self.tela_excecoes = TelaExcecoes(
+            usuario, consulta_de_materias, casos_de_uso.nivelamento
         )
         self.addTab(self.tela_materias, "Matérias")
         self.addTab(self.tela_questoes, "Questões do nivelamento")
+        self.addTab(self.tela_excecoes, "Exceções do nivelamento")
         self.tela_materias.materias_mudaram.connect(self.tela_questoes.recarregar_materias)
+        self.tela_materias.materias_mudaram.connect(self.tela_excecoes.recarregar_materias)
 
 
 class TelaInicio(QWidget):
@@ -90,6 +94,9 @@ class TelaInicio(QWidget):
 
     def _trocar_area(self, area: QWidget) -> None:
         self._coluna.replaceWidget(self.area, area)
+        # O deleteLater só apaga quando o Qt volta ao laço de eventos. Sem o hide, a área do
+        # usuário anterior continuaria desenhada por baixo da nova até lá.
+        self.area.hide()
         self.area.deleteLater()
         self.area = area
 
@@ -138,6 +145,7 @@ class JanelaPrincipal(QMainWindow):
             self._abrir_entrar()
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        self._encerrar_area()
         self._ao_fechar()
         super().closeEvent(event)
 
@@ -148,11 +156,20 @@ class JanelaPrincipal(QMainWindow):
     def _area_do_perfil(self, usuario: Usuario) -> QWidget:
         if usuario.perfil == Perfil.ADM:
             return AreaDoAdm(usuario, self._casos_de_uso)
-        aviso = QLabel(AVISO_DO_PERFIL[usuario.perfil])
+        if usuario.perfil == Perfil.ALUNO:
+            return AreaDoAluno(usuario, self._casos_de_uso.nivelamento)
+        aviso = QLabel(AVISO_DO_PROFESSOR)
         aviso.setAlignment(Qt.AlignmentFlag.AlignCenter)
         return aviso
 
+    def _encerrar_area(self) -> None:
+        """Quem sai no meio do nivelamento tem o tempo parado antes de a conexão fechar."""
+        area = self.tela_inicio.area
+        if isinstance(area, AreaDoAluno):
+            area.ao_sair()
+
     def _sair(self) -> None:
+        self._encerrar_area()
         self.tela_inicio.limpar()
         self._abrir_entrar()
 
