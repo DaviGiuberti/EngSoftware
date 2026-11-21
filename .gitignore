@@ -5,6 +5,7 @@ docs/Guia do Projeto*.md
 docs/eventstorming.html
 docs/ci-bloqueia-*.png
 .claude/settings.local.json
+.claude/skills/ciclo/
 
 # Documentos fora do repositório por enquanto
 docs/postmortem-template.md
