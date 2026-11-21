@@ -52,6 +52,12 @@ pip-audit         # dependências com vulnerabilidade conhecida
 
 Os testes de ponta a ponta abrem as janelas sem mostrá-las na tela, por isso rodam também na CI, que não tem tela.
 
+A CI ([ci.yml](.github/workflows/ci.yml)) roda esses mesmos comandos em todo PR, numa máquina Windows, e falha se o código de `domain/` tiver menos de 90% de cobertura (RNF11). Para conferir essa cobertura na sua máquina, depois do `pytest --cov`:
+
+```powershell
+coverage report --include="*/modules/*/domain/*" --fail-under=90
+```
+
 ## Gerar o executável
 
 Com o ambiente ativado:
@@ -78,7 +84,7 @@ Ao abrir, o app aplica as migrações novas de `src/plataforma/migracoes/`. Ante
 ├── CONTEXT.md                  glossário do domínio (linguagem ubíqua)
 ├── pyproject.toml              dependências e configuração das ferramentas
 ├── plataforma.spec             receita do PyInstaller para gerar o .exe
-├── .github/                    templates de PR e de issue de história
+├── .github/                    CI e templates de PR e de issue de história
 ├── docs/
 │   ├── visao.md                problema, métricas de outcome e escopo do MVP
 │   ├── regras.md               regras de negócio (R01, R02...)
