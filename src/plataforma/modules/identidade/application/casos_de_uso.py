@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from plataforma.compartilhado.transacao import Transacao
 from plataforma.modules.identidade.application.portas import RepositorioDeUsuarios
 from plataforma.modules.identidade.domain.cadastro import (
+    AlunoNaoEncontrado,
     exigir_email_livre,
     exigir_que_nao_haja_adm,
     normalizar_email,
@@ -55,6 +56,19 @@ class Entrar:
 
     def executar(self, email: str, senha: str) -> Usuario:
         return autenticar(self._usuarios.buscar_credencial(normalizar_email(email)), senha)
+
+
+class ConsultaDeAlunos:
+    """Os outros módulos acham um aluno pelo e-mail (ADR 0002)."""
+
+    def __init__(self, usuarios: RepositorioDeUsuarios) -> None:
+        self._usuarios = usuarios
+
+    def obter_por_email(self, email: str) -> Usuario:
+        credencial = self._usuarios.buscar_credencial(normalizar_email(email))
+        if credencial is None or credencial.usuario.perfil != Perfil.ALUNO:
+            raise AlunoNaoEncontrado()
+        return credencial.usuario
 
 
 @dataclass(frozen=True)
