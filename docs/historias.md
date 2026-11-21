@@ -680,7 +680,7 @@ Cenário: R15 — o preço continua com o ADM
 
 ### H27 · Cadastrar matéria
 
-Como ADM, quero cadastrar uma matéria com seus níveis, as faixas de nota do nivelamento e o valor da mensalidade para que o teste coloque o aluno no nível certo e as turmas possam ser cobradas. Prioridade: Alta. Regras: R01, R02, R27.
+Como ADM, quero cadastrar uma matéria com seus níveis, as faixas de nota do nivelamento e o valor da mensalidade para que o teste coloque o aluno no nível certo e as turmas possam ser cobradas. Prioridade: Alta. Regras: R01, R02, R27, R40.
 
 ```gherkin
 Cenário: R01 — cada matéria define quantos níveis tem
@@ -697,17 +697,27 @@ Cenário: R27 — mensalidade por matéria
   Dadas as mensalidades de R$ 200 em Física e de R$ 250 em Matemática
   Quando um aluno se matricula numa turma de Matemática
   Então a primeira mensalidade cobrada é de R$ 250
+
+Cenário: R40 — nota mínima fora de ordem
+  Dado o ADM cadastrando Física com 3 níveis
+  Quando ele define a nota mínima do N2 em 70% e a do N3 em 40%
+  Então o sistema recusa, informando que a nota mínima do N3 precisa ser maior que a do N2
 ```
 
 ### H28 · Cadastrar questões do nivelamento
 
-Como ADM, quero cadastrar as questões do nivelamento de cada matéria para que o aluno tenha um teste para fazer. Prioridade: Alta. Regras: R02.
+Como ADM, quero cadastrar as questões do nivelamento de cada matéria para que o aluno tenha um teste para fazer. Prioridade: Alta. Regras: R02, R41.
 
 ```gherkin
 Cenário: cadastro de questão
   Dado o ADM
-  Quando ele cadastra uma questão de Física com 4 alternativas e marca a correta
+  Quando ele cadastra uma questão de Física com 5 alternativas e marca a correta
   Então a questão passa a fazer parte do nivelamento de Física
+
+Cenário: R41 — questão com 4 alternativas
+  Dado o ADM
+  Quando ele tenta cadastrar uma questão de Física com 4 alternativas
+  Então o sistema recusa, informando que a questão precisa ter 5 alternativas
 
 Cenário: R02 — correção automática pela porcentagem de acertos
   Dado o nivelamento de Física com 20 questões
@@ -1016,3 +1026,5 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R37 | H07 |
 | R38 | H34 |
 | R39 | H38 |
+| R40 | H27 |
+| R41 | H28 |
