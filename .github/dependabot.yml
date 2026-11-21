@@ -1,0 +1,14 @@
+# O GitHub abre PRs de atualização toda semana (RNF09). O pip-audit da CI só avisa de
+# vulnerabilidade no que já está instalado; o Dependabot propõe as versões novas.
+version: 2
+updates:
+  # Dependências do pyproject.toml.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+  # Actions usadas em .github/workflows/.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
