@@ -3,6 +3,7 @@ Projeto.txt
 docs/Guia do Projeto*.pdf
 docs/Guia do Projeto*.md
 docs/eventstorming.html
+docs/ci-bloqueia-*.png
 .claude/settings.local.json
 
 # Documentos fora do repositório por enquanto
