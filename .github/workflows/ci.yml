@@ -23,7 +23,7 @@ jobs:
       # caractere fora do cp1252 não derrubar o passo. Não muda como o app lê arquivos.
       PYTHONIOENCODING: utf-8
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v6
         with:
@@ -67,7 +67,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v6
         with:
