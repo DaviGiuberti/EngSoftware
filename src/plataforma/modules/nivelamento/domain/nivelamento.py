@@ -1,13 +1,27 @@
 """Nivelamento (H01, H02, H03, H33): uma vez por matéria (R03), 60 minutos que só correm com o
 teste aberto (R30) e o resultado do nivelamento refeito (R42)."""
 
-from dataclasses import dataclass, replace
+from collections.abc import Collection, Mapping
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from enum import StrEnum
 
 from plataforma.compartilhado.recusa import Recusa
+from plataforma.modules.nivelamento.domain.questao import LETRAS_DAS_ALTERNATIVAS
 
 DURACAO_DO_NIVELAMENTO = timedelta(minutes=60)
+
+
+class NivelamentoNaoEncontrado(Recusa):
+    mensagem = "Nivelamento não encontrado."
+
+
+class NivelamentoConcluido(Recusa):
+    mensagem = "Este nivelamento já terminou."
+
+
+class QuestaoForaDoNivelamento(Recusa):
+    mensagem = "Esta questão não é deste nivelamento."
 
 
 class NivelamentoJaFeito(Recusa):
@@ -83,6 +97,63 @@ def _usado_ate(tempo: TempoDoNivelamento, agora: datetime) -> timedelta:
         return tempo.usado
     # Um relógio que volta no tempo não devolve minutos ao aluno.
     return tempo.usado + max(agora - tempo.aberto_desde, timedelta(0))
+
+
+@dataclass(frozen=True)
+class Conclusao:
+    """Quando o nivelamento terminou, a nota (R34) e o nível da faixa dessa nota (R02)."""
+
+    em: datetime
+    nota: int
+    nivel: int
+
+
+@dataclass(frozen=True)
+class Nivelamento:
+    """Um nivelamento que o aluno fez ou está fazendo numa matéria.
+
+    respostas leva o id da questão à posição da alternativa marcada (0 é a A).
+    """
+
+    id: int
+    aluno_id: int
+    materia_id: int
+    tempo: TempoDoNivelamento
+    respostas: Mapping[int, int] = field(default_factory=dict)
+    conclusao: Conclusao | None = None
+
+
+@dataclass(frozen=True)
+class NivelDoAluno:
+    """O nível do aluno numa matéria (R01) e se o ADM liberou que ele refaça o nivelamento."""
+
+    materia_id: int
+    nivel: int
+    refazer_liberado: bool = False
+
+
+def exigir_aberto(nivelamento: Nivelamento) -> None:
+    if nivelamento.conclusao is not None:
+        raise NivelamentoConcluido()
+
+
+def responder(
+    nivelamento: Nivelamento, ids_das_questoes: Collection[int], questao_id: int, posicao: int
+) -> Nivelamento:
+    """Marca a resposta de uma questão. Marcar de novo troca a resposta."""
+    exigir_aberto(nivelamento)
+    if questao_id not in ids_das_questoes:
+        raise QuestaoForaDoNivelamento()
+    if not 0 <= posicao < len(LETRAS_DAS_ALTERNATIVAS):
+        raise ValueError(f"Posição de alternativa fora de A a E: {posicao}")
+    return replace(nivelamento, respostas={**nivelamento.respostas, questao_id: posicao})
+
+
+def concluir(nivelamento: Nivelamento, agora: datetime, nota: int, nivel: int) -> Nivelamento:
+    """Para o tempo e guarda o resultado do nivelamento."""
+    return replace(
+        nivelamento, tempo=fechar(nivelamento.tempo, agora), conclusao=Conclusao(agora, nota, nivel)
+    )
 
 
 def exigir_que_pode_iniciar(nome_da_materia: str, tem_nivel: bool, refazer_liberado: bool) -> None:
