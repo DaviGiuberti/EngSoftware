@@ -35,7 +35,9 @@ Depois, o app abre com 1 comando:
 python -m plataforma
 ```
 
-A janela mostra "Banco: ok" quando o banco foi criado ou atualizado e respondeu. Veja [onde ficam os dados](#onde-ficam-os-dados).
+Na primeira vez, o app pede o e-mail e a senha do ADM, que administra a plataforma. Não existe senha padrão: guarde o que você definir. Depois disso, ele abre na tela de entrar, onde o aluno também cria a própria conta. A senha precisa ter pelo menos 8 caracteres.
+
+A barra de status mostra "Banco: ok" quando o banco foi criado ou atualizado e respondeu. Veja [onde ficam os dados](#onde-ficam-os-dados).
 
 ## Como testar
 
@@ -70,7 +72,9 @@ O `.exe` sai em `dist\plataforma.exe`. É um arquivo só, que abre sem console e
 
 ## Onde ficam os dados
 
-O banco fica em `%LOCALAPPDATA%\Plataforma\plataforma.db`. É o mesmo arquivo para o app rodando pelo código e para qualquer `.exe`, em qualquer pasta. Para abrir a pasta, aperte Win + R e digite `%LOCALAPPDATA%\Plataforma`. Os testes usam bancos temporários e não mexem nesse arquivo.
+O banco fica em `%LOCALAPPDATA%\Plataforma\plataforma.db`. É o mesmo arquivo para o app rodando pelo código e para qualquer `.exe`, em qualquer pasta. Para abrir a pasta, aperte Win + R e digite `%LOCALAPPDATA%\Plataforma`. Os testes usam pastas temporárias e não mexem nesses arquivos.
+
+O log fica em `%LOCALAPPDATA%\Plataforma\logs\plataforma.log`, com uma linha JSON por ação: data, usuário, ação e resultado (`ok`, `recusado` ou `erro`). A senha nunca vai para o log. Quando o arquivo passa de 1 MB, o app começa outro e guarda no máximo 5 (RNF14). Num erro inesperado, a tela mostra só uma mensagem curta, e o detalhe fica no log (RNF10).
 
 Ao abrir, o app aplica as migrações novas de `src/plataforma/migracoes/`. Antes de mudar um banco que já existia, ele guarda uma cópia em `%LOCALAPPDATA%\Plataforma\copias\`, com o nome `plataforma-antes-da-NNNN.db`, e mantém só as 3 mais recentes (RNF16).
 
@@ -97,8 +101,11 @@ Ao abrir, o app aplica as migrações novas de `src/plataforma/migracoes/`. Ante
 ├── src/plataforma/             código do app
 │   ├── __main__.py             permite abrir com python -m plataforma
 │   ├── main.py                 monta tudo e abre o app
-│   ├── banco.py                migrações, cópias do banco e verificação
-│   ├── janela_principal.py     janela principal
+│   ├── banco.py                migrações, cópias do banco, conexão e transações
+│   ├── log.py                  log em JSON das ações (RNF14)
+│   ├── acoes.py                por onde as telas chamam os casos de uso: log e mensagens
+│   ├── janela_principal.py     janela principal, que troca entre as telas
+│   ├── compartilhado/          tipos usados por mais de um módulo, como a Recusa
 │   ├── migracoes/              migrações .sql numeradas (0001_inicial.sql, ...)
 │   └── modules/<módulo>/
 │       ├── domain/             regras de negócio como funções puras
@@ -106,6 +113,7 @@ Ao abrir, o app aplica as migrações novas de `src/plataforma/migracoes/`. Ante
 │       ├── infra/              banco (sqlite3)
 │       └── ui/                 telas (PySide6)
 └── tests/
+    ├── unidade/                testes das regras do domain/, sem banco e sem mocks
     ├── integracao/             testes com um banco SQLite temporário
     └── e2e/                    testes das janelas com o pytest-qt
 ```
