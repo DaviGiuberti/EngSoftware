@@ -9,7 +9,7 @@ Projeto final de Engenharia de Software (UNIFESP). O aluno faz um teste de nivel
 
 Stack: Python 3.12, interface em PySide6, banco SQLite e executável gerado pelo PyInstaller. Testes com pytest e pytest-qt ([ADR 0001](docs/adr/0001-stack.md)).
 
-> O executável aparece em Releases a partir da primeira versão. Até lá, rode pelo código ou gere o `.exe` na sua máquina (veja [Gerar o executável](#gerar-o-executável)).
+> A cada merge na `main`, a CI gera o `.exe` e publica uma release `v0.1.N` com ele (RNF16). Para testar uma mudança que ainda não entrou na `main`, rode pelo código ou gere o `.exe` na sua máquina (veja [Gerar o executável](#gerar-o-executável)).
 
 ## Como rodar
 
@@ -55,7 +55,7 @@ Os testes de ponta a ponta abrem as janelas sem mostrá-las na tela, por isso ro
 A CI ([ci.yml](.github/workflows/ci.yml)) roda esses mesmos comandos em todo PR, numa máquina Windows, e falha se o código de `domain/` tiver menos de 90% de cobertura (RNF11). Para conferir essa cobertura na sua máquina, depois do `pytest --cov`:
 
 ```powershell
-coverage report --include="*/modules/*/domain/*" --fail-under=90
+coverage report --include="*/domain/*" --fail-under=90
 ```
 
 ## Gerar o executável
@@ -84,7 +84,7 @@ Ao abrir, o app aplica as migrações novas de `src/plataforma/migracoes/`. Ante
 ├── CONTEXT.md                  glossário do domínio (linguagem ubíqua)
 ├── pyproject.toml              dependências e configuração das ferramentas
 ├── plataforma.spec             receita do PyInstaller para gerar o .exe
-├── .github/                    CI e templates de PR e de issue de história
+├── .github/                    CI, Dependabot e templates de PR e de issue de história
 ├── docs/
 │   ├── visao.md                problema, métricas de outcome e escopo do MVP
 │   ├── regras.md               regras de negócio (R01, R02...)
