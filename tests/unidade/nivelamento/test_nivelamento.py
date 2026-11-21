@@ -7,9 +7,13 @@ import pytest
 
 from plataforma.compartilhado.horario import BRASILIA
 from plataforma.modules.nivelamento.domain.nivelamento import (
+    Conclusao,
     NadaParaRefazer,
+    Nivelamento,
+    NivelamentoConcluido,
     NivelamentoEmAndamento,
     NivelamentoJaFeito,
+    QuestaoForaDoNivelamento,
     SemNivelamentoEmAndamento,
     SituacaoNaMateria,
     TempoDoNivelamento,
@@ -17,12 +21,14 @@ from plataforma.modules.nivelamento.domain.nivelamento import (
     abrir,
     acabou,
     com_mais_tempo,
+    concluir,
     exigir_em_andamento,
     exigir_que_pode_iniciar,
     exigir_que_pode_liberar,
     fechar,
     nivel_depois_do_nivelamento,
     registrar,
+    responder,
     restante,
     situacao_na_materia,
 )
@@ -36,6 +42,10 @@ def minutos(quantidade: int) -> timedelta:
 
 def aberto_em(momento: datetime, usado: timedelta = timedelta(0)) -> TempoDoNivelamento:
     return abrir(TempoDoNivelamento(usado=usado), momento)
+
+
+def nivelamento_aberto() -> Nivelamento:
+    return Nivelamento(id=1, aluno_id=10, materia_id=1, tempo=aberto_em(INICIO))
 
 
 def test_r30_o_nivelamento_tem_60_minutos() -> None:
@@ -137,6 +147,41 @@ def test_r03_o_adm_nao_libera_refazer_durante_um_nivelamento_em_andamento() -> N
         NivelamentoEmAndamento, match="Este aluno está fazendo o nivelamento de Física agora."
     ):
         exigir_que_pode_liberar("Física", tem_nivel=True, em_andamento=True)
+
+
+def test_o_aluno_marca_e_troca_a_resposta_de_uma_questao() -> None:
+    respondido = responder(nivelamento_aberto(), {7, 8}, questao_id=7, posicao=1)
+
+    trocado = responder(respondido, {7, 8}, questao_id=7, posicao=3)
+
+    assert trocado.respostas == {7: 3}
+
+
+def test_questao_de_fora_do_nivelamento_e_recusada() -> None:
+    with pytest.raises(QuestaoForaDoNivelamento, match="Esta questão não é deste nivelamento."):
+        responder(nivelamento_aberto(), {7, 8}, questao_id=99, posicao=1)
+
+
+def test_posicao_fora_de_a_a_e_e_erro_de_programacao() -> None:
+    with pytest.raises(ValueError, match="5"):
+        responder(nivelamento_aberto(), {7}, questao_id=7, posicao=5)
+
+
+def test_concluir_para_o_tempo_e_guarda_a_nota_e_o_nivel() -> None:
+    meia_hora_depois = INICIO + minutos(30)
+
+    concluido = concluir(nivelamento_aberto(), meia_hora_depois, nota=40, nivel=2)
+
+    assert concluido.conclusao == Conclusao(em=meia_hora_depois, nota=40, nivel=2)
+    assert concluido.tempo.aberto_desde is None
+    assert concluido.tempo.usado == minutos(30)
+
+
+def test_nivelamento_concluido_nao_recebe_mais_respostas() -> None:
+    concluido = concluir(nivelamento_aberto(), INICIO + minutos(30), nota=40, nivel=2)
+
+    with pytest.raises(NivelamentoConcluido, match="Este nivelamento já terminou."):
+        responder(concluido, {7}, questao_id=7, posicao=1)
 
 
 def test_o_primeiro_nivelamento_define_o_nivel() -> None:
