@@ -37,6 +37,11 @@ select = ["E", "W", "F", "I", "B", "UP", "SIM", "PT", "S"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
 
+[tool.ruff.lint.isort]
+# Sem isto, o ruff trata como de terceiros o import de um módulo do projeto que ainda
+# não existe (fase vermelha do TDD) e acusa a ordem dos imports (I001).
+known-first-party = ["plataforma"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
