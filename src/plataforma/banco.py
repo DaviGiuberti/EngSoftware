@@ -1,4 +1,4 @@
-"""Banco SQLite do app: migrações e cópias de segurança antes de migrar (RNF16)."""
+"""Banco SQLite do app: migrações, cópias de segurança antes de migrar (RNF16) e verificação."""
 
 import sqlite3
 from contextlib import closing
@@ -28,6 +28,13 @@ def aplicar_migracoes(caminho_banco: Path, pasta_migracoes: Path, pasta_copias: 
             _guardar_copia(conexao, caminho_banco, pasta_copias, antes_da=pendentes[0][0])
         for numero, arquivo in pendentes:
             _aplicar(conexao, numero, arquivo)
+
+
+def verificar_banco(caminho_banco: Path) -> bool:
+    """Faz SELECT 1 no banco e diz se ele respondeu."""
+    with closing(sqlite3.connect(caminho_banco)) as conexao:
+        linha: tuple[int] | None = conexao.execute("SELECT 1").fetchone()
+    return linha == (1,)
 
 
 def _ler_migracoes(pasta_migracoes: Path) -> list[tuple[int, Path]]:
