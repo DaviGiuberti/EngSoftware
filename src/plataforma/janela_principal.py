@@ -30,7 +30,7 @@ from plataforma.modules.materias.application.casos_de_uso import CasosDeUsoDeMat
 from plataforma.modules.materias.ui.telas import TelaMaterias
 from plataforma.modules.nivelamento.application.casos_de_uso import CasosDeUsoDoNivelamento
 from plataforma.modules.nivelamento.ui.telas import TelaExcecoes, TelaQuestoes
-from plataforma.modules.nivelamento.ui.telas_do_aluno import AreaDoAluno
+from plataforma.modules.nivelamento.ui.telas_do_aluno import AreaDoAluno, TelaMeusCertificados
 from plataforma.modules.turmas.application.casos_de_uso import CasosDeUsoDeTurmas
 from plataforma.modules.turmas.application.matricula import CasosDeUsoDaMatricula
 from plataforma.modules.turmas.application.presenca import CasosDeUsoDasAulas
@@ -60,7 +60,8 @@ def por_as_turmas_em_dia(usuario: Usuario, turmas: CasosDeUsoDeTurmas) -> None:
 
 
 class AbasDoAluno(QTabWidget):
-    """Abas do aluno: o nível em cada matéria, com o nivelamento, e as turmas do nível dele."""
+    """Abas do aluno: o nível em cada matéria, com o nivelamento, as turmas do nível dele e os
+    certificados."""
 
     def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUso) -> None:
         super().__init__()
@@ -68,8 +69,10 @@ class AbasDoAluno(QTabWidget):
         self._casos_das_turmas = casos_de_uso.turmas
         self.nivelamento = AreaDoAluno(usuario, casos_de_uso.nivelamento)
         self.turmas = TelaTurmasDoAluno(usuario, casos_de_uso.matricula)
+        self.certificados = TelaMeusCertificados(usuario, casos_de_uso.nivelamento)
         self.addTab(self.nivelamento, "Meus níveis")
         self.addTab(self.turmas, "Turmas")
+        self.addTab(self.certificados, "Meus certificados")
         self.turmas.avisos_mudaram.connect(self._avisar_no_titulo)
         self.currentChanged.connect(self._ao_trocar_de_aba)
         # A aba Turmas leu as turmas ao ser criada, antes de o sinal estar ligado.
@@ -86,6 +89,10 @@ class AbasDoAluno(QTabWidget):
         elif self.currentWidget() is self.nivelamento:
             por_as_turmas_em_dia(self._usuario, self._casos_das_turmas)
             self.nivelamento.tela_meus_niveis.recarregar()
+        # A promoção também emite o certificado (R33).
+        elif self.currentWidget() is self.certificados:
+            por_as_turmas_em_dia(self._usuario, self._casos_das_turmas)
+            self.certificados.recarregar()
 
     def _avisar_no_titulo(self, vagas_oferecidas: int) -> None:
         """H06: o aluno vê a vaga oferecida sem precisar abrir a aba Turmas."""

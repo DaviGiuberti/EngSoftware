@@ -7,6 +7,7 @@ from plataforma.compartilhado.transacao import Transacao
 from plataforma.modules.identidade.domain.autorizacao import exigir_perfil
 from plataforma.modules.identidade.domain.usuario import Perfil, Usuario
 from plataforma.modules.materias.application.casos_de_uso import ConsultaDeMaterias
+from plataforma.modules.nivelamento.application.certificados import VerMeusCertificados
 from plataforma.modules.nivelamento.application.fazer_nivelamento import (
     ConcluirNivelamento,
     DarMaisTempo,
@@ -72,5 +73,6 @@ class CasosDeUsoDoNivelamento:
     fechar: FecharNivelamento
     concluir: ConcluirNivelamento
     ver_meus_niveis: VerMeusNiveis
+    ver_meus_certificados: VerMeusCertificados
     dar_mais_tempo: DarMaisTempo
     liberar_refazer: LiberarRefazer
