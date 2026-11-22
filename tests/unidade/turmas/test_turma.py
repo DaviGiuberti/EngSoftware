@@ -1,7 +1,8 @@
 """Turma (H30, H31): nível inicial da matéria e horário fixo (R24), 12 vagas (R04), professor sem
 conflito de horário (R07) e troca de professor (R26)."""
 
-from datetime import datetime, time
+from dataclasses import replace
+from datetime import date, datetime, time
 
 import pytest
 
@@ -106,3 +107,13 @@ def test_r26_o_adm_troca_o_professor_e_o_nivel_e_o_horario_continuam() -> None:
 def test_r26_trocar_pelo_professor_que_ja_da_aula_na_turma_e_recusado() -> None:
     with pytest.raises(MesmoProfessor, match="carlos@exemplo.com já dá aula nesta turma."):
         trocar_professor(TURMA_DE_FISICA, CARLOS, "carlos@exemplo.com")
+
+
+def test_r18_a_turma_nao_conta_entre_as_dadas_a_aula_nao_realizada() -> None:
+    quinta_26_11 = date(2026, 11, 26)
+    com_nao_realizada = replace(TURMA_DE_FISICA, nao_realizadas=frozenset({quinta_26_11}))
+    sexta_27_11 = datetime(2026, 11, 27, 10, 0, tzinfo=BRASILIA)
+
+    assert TURMA_DE_FISICA.aulas_dadas(sexta_27_11) == 2
+    assert com_nao_realizada.aulas_dadas(sexta_27_11) == 1
+    assert com_nao_realizada.calendario()[1].numero is None
