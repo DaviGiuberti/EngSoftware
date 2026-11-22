@@ -33,11 +33,13 @@ from plataforma.modules.materias.infra.repositorio_de_materias import (
     RepositorioDeMateriasSqlite,
 )
 from plataforma.modules.nivelamento.application.consulta_de_niveis import ConsultaDeNiveis
+from plataforma.modules.nivelamento.application.promocao import Promocoes
 from plataforma.modules.nivelamento.domain.nivelamento import NivelDoAluno
 from plataforma.modules.nivelamento.infra.repositorio_de_nivelamentos import (
     RepositorioDeNivelamentosSqlite,
 )
 from plataforma.modules.turmas.application.casos_de_uso import CriarTurma, VerTurmas
+from plataforma.modules.turmas.application.em_dia import TurmasEmDia
 from plataforma.modules.turmas.application.matricula import (
     ConfirmarVaga,
     EntrarNaListaDeEspera,
@@ -158,9 +160,11 @@ def escola(
     professores = ConsultaDeProfessores(repositorio_de_professores)
     repositorio_de_materias = RepositorioDeMateriasSqlite(conexao)
     materias = ConsultaDeMaterias(repositorio_de_materias)
-    niveis = ConsultaDeNiveis(RepositorioDeNivelamentosSqlite(conexao))
+    nivelamentos = RepositorioDeNivelamentosSqlite(conexao)
+    niveis = ConsultaDeNiveis(nivelamentos)
     turmas = RepositorioDeTurmasSqlite(conexao)
-    do_aluno = (turmas, materias, professores, niveis, relogio, em_transacao)
+    em_dia = TurmasEmDia(turmas, materias, Promocoes(nivelamentos, materias))
+    do_aluno = (turmas, materias, professores, niveis, relogio, em_transacao, em_dia)
     return Escola(
         conexao=conexao,
         relogio=relogio,
@@ -168,8 +172,8 @@ def escola(
         cadastrar_materia=CadastrarMateria(repositorio_de_materias, em_transacao),
         cadastrar_professor=CadastrarProfessor(usuarios, em_transacao),
         habilitar_professor=HabilitarProfessor(repositorio_de_professores, materias, em_transacao),
-        criar_turma=CriarTurma(turmas, materias, professores, relogio, em_transacao),
-        ver_turmas=VerTurmas(turmas, materias, professores, relogio),
+        criar_turma=CriarTurma(turmas, materias, professores, relogio, em_transacao, em_dia),
+        ver_turmas=VerTurmas(turmas, materias, professores, relogio, em_transacao, em_dia),
         ver_turmas_do_aluno=VerTurmasDoAluno(*do_aluno),
         matricular=Matricular(*do_aluno),
         entrar_na_lista=EntrarNaListaDeEspera(*do_aluno),
