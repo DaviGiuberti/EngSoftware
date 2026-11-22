@@ -25,15 +25,20 @@ from plataforma.modules.catalogo.domain.pacote import Pacote
 from plataforma.modules.catalogo.ui.comum import (
     descrever_estado,
     descrever_preco,
-    linha_escolhida,
     linhas_das_aulas,
-    preencher,
     reescolher,
-    tabela_de_escolha,
 )
 from plataforma.modules.identidade.domain.usuario import Usuario
 from plataforma.modules.materias.domain.materia import nome_do_nivel
-from plataforma.ui_comum import mostrar_aviso, mostrar_recusa, mostrar_sucesso, titulo
+from plataforma.ui_comum import (
+    linha_escolhida,
+    mostrar_aviso,
+    mostrar_recusa,
+    mostrar_sucesso,
+    preencher,
+    tabela_de_escolha,
+    titulo,
+)
 
 NENHUM_ESCOLHIDO = "Escolha um pacote na tabela para ver as aulas."
 SEM_PACOTES = "Nenhum pacote ainda. Os professores criam os pacotes e os enviam para revisão."

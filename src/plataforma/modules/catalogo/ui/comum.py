@@ -2,41 +2,11 @@
 
 from collections.abc import Sequence
 
-from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QTableWidget, QTableWidgetItem
+from PySide6.QtWidgets import QTableWidget
 
 from plataforma.compartilhado.dinheiro import formatar_reais
 from plataforma.modules.catalogo.application.casos_de_uso import ResumoDoPacote
 from plataforma.modules.catalogo.domain.pacote import NOME_DO_ESTADO, AulaGravada, Pacote
-
-
-def tabela_de_escolha(colunas: list[str]) -> QTableWidget:
-    """Tabela só de leitura, em que se escolhe uma linha inteira por vez."""
-    tabela = QTableWidget(0, len(colunas))
-    tabela.setHorizontalHeaderLabels(colunas)
-    tabela.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-    tabela.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-    tabela.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-    tabela.verticalHeader().setVisible(False)
-    cabecalho = tabela.horizontalHeader()
-    cabecalho.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-    cabecalho.setStretchLastSection(True)
-    return tabela
-
-
-def preencher(tabela: QTableWidget, linhas: Sequence[Sequence[str]]) -> None:
-    """Põe as linhas na tabela sem avisar a troca de seleção."""
-    tabela.blockSignals(True)
-    tabela.clearSelection()
-    tabela.setRowCount(len(linhas))
-    for linha, valores in enumerate(linhas):
-        for coluna, valor in enumerate(valores):
-            tabela.setItem(linha, coluna, QTableWidgetItem(valor))
-    tabela.blockSignals(False)
-
-
-def linha_escolhida(tabela: QTableWidget) -> int | None:
-    selecionadas = tabela.selectionModel().selectedRows()
-    return selecionadas[0].row() if selecionadas else None
 
 
 def descrever_preco(pacote: Pacote) -> str:

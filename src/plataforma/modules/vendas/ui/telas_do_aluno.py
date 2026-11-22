@@ -25,16 +25,19 @@ from plataforma.modules.catalogo.application.aulas_do_aluno import (
     PacoteNaVitrine,
 )
 from plataforma.modules.catalogo.domain.aulas_do_aluno import AcessoAoPacote
-from plataforma.modules.catalogo.ui.comum import (
-    descrever_preco,
-    linha_escolhida,
-    preencher,
-    tabela_de_escolha,
-)
+from plataforma.modules.catalogo.ui.comum import descrever_preco
 from plataforma.modules.identidade.domain.usuario import Usuario
 from plataforma.modules.materias.domain.materia import nome_do_nivel
 from plataforma.modules.vendas.application.casos_de_uso import CasosDeUsoDeVendas
-from plataforma.ui_comum import mostrar_aviso, mostrar_recusa, mostrar_sucesso, titulo
+from plataforma.ui_comum import (
+    linha_escolhida,
+    mostrar_aviso,
+    mostrar_recusa,
+    mostrar_sucesso,
+    preencher,
+    tabela_de_escolha,
+    titulo,
+)
 
 DESTAQUE = "★ seu nível"
 SEM_PACOTES = "Nenhum pacote à venda ainda."
