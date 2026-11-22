@@ -1,7 +1,8 @@
-"""Turmas em dia (H09, H10, H11, H23): o que o tempo decide sem ninguém agir. No fim da etapa, a
-turma passa para o nível seguinte ou encerra (R04, R09), e a lista de espera é esvaziada (R50).
-Quando terminam as 72 horas de correção da nota, o resultado da etapa passa a valer: o aprovado é
-promovido, e o reprovado sai da turma, abrindo a vaga para a lista de espera (R05, R21, R49).
+"""Turmas em dia (H09, H10, H11, H23, H07): o que o tempo decide sem ninguém agir. No fim da
+etapa, a turma passa para o nível seguinte ou encerra (R04, R09), e a lista de espera é esvaziada
+(R50). Quando terminam as 72 horas de correção da nota, o resultado da etapa passa a valer: o
+aprovado é promovido, e o reprovado sai da turma (R21, R49). Quem não paga a mensalidade até o fim
+da tolerância perde a vaga (R28, R37). A vaga de quem sai vai para a lista de espera (R05).
 
 Não há tarefa em segundo plano, como na lista de espera (R35): todo caso de uso das turmas põe as
 turmas em dia antes de agir, e cada mudança vale a partir do momento em que aconteceu. O resultado
@@ -24,7 +25,8 @@ from plataforma.modules.turmas.domain.lista_de_espera import (
     pode_oferecer_em,
     vencer_prazos,
 )
-from plataforma.modules.turmas.domain.matricula import Matricula
+from plataforma.modules.turmas.domain.matricula import Matricula, MotivoDaSaida
+from plataforma.modules.turmas.domain.mensalidade import proxima_mensalidade, vence
 from plataforma.modules.turmas.domain.presenca import faltas_na_etapa
 from plataforma.modules.turmas.domain.prova_final import (
     ProvaFinal,
@@ -34,6 +36,7 @@ from plataforma.modules.turmas.domain.prova_final import (
     resultado_da_etapa,
 )
 from plataforma.modules.turmas.domain.turma import (
+    Encerramento,
     MudancaDaTurma,
     Turma,
     com_a_mudanca,
@@ -83,6 +86,17 @@ class _ResultadoQueVale:
     resultado: ResultadoEtapa
 
 
+@dataclass(frozen=True)
+class _PerdaDaVaga:
+    """R28 e R37: o aluno que não pagou a mensalidade perde a vaga na virada para o 8º dia."""
+
+    em: datetime
+    aluno_id: int
+
+
+type _Evento = MudancaDaTurma | _ResultadoQueVale | _PerdaDaVaga
+
+
 class TurmasEmDia:
     """Aplica a todas as turmas o que o tempo decidiu até agora, na ordem em que aconteceu."""
 
@@ -118,17 +132,22 @@ class TurmasEmDia:
         materia = self._materias.obter(turma.materia_id)
         mudancas = mudancas_ate(turma, materia.nivel_maximo, agora)
         resultados = self._resultados_que_passam_a_valer(turma, agora)
-        if not mudancas and not resultados:
+        perdas = self._perdas_de_vaga(turma, mudancas, agora)
+        if not mudancas and not resultados and not perdas:
             return
-        # No mesmo momento, a mudança da turma vem antes do resultado de um aluno.
-        eventos: list[tuple[datetime, int, MudancaDaTurma | _ResultadoQueVale]] = [
+        # No mesmo momento, a mudança da turma vem antes do que acontece com um aluno.
+        eventos: list[tuple[datetime, int, _Evento]] = [
             *((mudanca.em, 0, mudanca) for mudanca in mudancas),
             *((resultado.em, 1, resultado) for resultado in resultados),
+            *((perda.em, 1, perda) for perda in perdas),
         ]
         lista = self._turmas.lista_de_espera(turma.id)
         for _, _, evento in sorted(eventos, key=lambda evento: (evento[0], evento[1])):
             if isinstance(evento, _ResultadoQueVale):
                 lista = self._aplicar_resultado(turma, materia, evento, lista)
+            elif isinstance(evento, _PerdaDaVaga):
+                if self._sair_da_turma(turma, evento.aluno_id, evento.em, MotivoDaSaida.ATRASO):
+                    lista = self._oferecer_a_vaga(turma, lista, evento.em)
             else:
                 self._turmas.aplicar_mudanca(turma.id, evento)
                 turma = com_a_mudanca(turma, evento)
@@ -160,6 +179,23 @@ class TurmasEmDia:
                 )
         return resultados
 
+    def _perdas_de_vaga(
+        self, turma: Turma, mudancas: list[MudancaDaTurma], agora: datetime
+    ) -> list[_PerdaDaVaga]:
+        """R28 e R37: quem não pagou a mensalidade seguinte até o fim da tolerância perde a vaga.
+        Depois que a turma encerra, nenhuma mensalidade vence (R54)."""
+        encerrada_em = turma.encerrada_em
+        for mudanca in mudancas:
+            if isinstance(mudanca, Encerramento):
+                encerrada_em = mudanca.em
+        perdas = []
+        for matricula in self._turmas.matriculas_da_turma(turma.id):
+            pagas = len(self._turmas.mensalidades(matricula.id))
+            devida = proxima_mensalidade(matricula.matriculada_em.date(), pagas)
+            if vence(devida, encerrada_em) and devida.perde_a_vaga_em <= agora:
+                perdas.append(_PerdaDaVaga(devida.perde_a_vaga_em, matricula.aluno_id))
+        return perdas
+
     def _aplicar_resultado(
         self,
         turma: Turma,
@@ -172,16 +208,24 @@ class TurmasEmDia:
             self._promocoes.aprovar_na_etapa(evento.aluno_id, materia.id, evento.nivel, evento.em)
             # R09: a turma encerrou com a etapa, e quem foi aprovado nela sai.
             if turma.encerrada and evento.nivel == turma.nivel:
-                self._sair_da_turma(turma, evento.aluno_id, evento.em)
-        elif self._sair_da_turma(turma, evento.aluno_id, evento.em):
-            # R21 e R05: o reprovado sai, e a vaga vai para o 1º da lista ainda sem oferta.
-            pode_oferecer = pode_oferecer_em(turma)
-            lista = vencer_prazos(lista, evento.em, pode_oferecer)
-            lista = oferecer_vaga(lista, evento.em, pode_oferecer(evento.em))
+                self._sair_da_turma(turma, evento.aluno_id, evento.em, MotivoDaSaida.CONCLUSAO)
+        elif self._sair_da_turma(turma, evento.aluno_id, evento.em, MotivoDaSaida.REPROVACAO):
+            # R21: o reprovado sai da turma.
+            lista = self._oferecer_a_vaga(turma, lista, evento.em)
         self._turmas.aplicar_resultado(turma.id, evento.nivel, evento.aluno_id, evento.resultado)
         return lista
 
-    def _sair_da_turma(self, turma: Turma, aluno_id: int, em: datetime) -> bool:
+    @staticmethod
+    def _oferecer_a_vaga(turma: Turma, lista: ListaDeEspera, em: datetime) -> ListaDeEspera:
+        """R05 e R45: a vaga de quem saiu vai para o 1º da lista ainda sem oferta, se a etapa
+        ainda não chegou à 13ª aula. Os prazos que venceram antes valem primeiro (R35)."""
+        pode_oferecer = pode_oferecer_em(turma)
+        lista = vencer_prazos(lista, em, pode_oferecer)
+        return oferecer_vaga(lista, em, pode_oferecer(em))
+
+    def _sair_da_turma(
+        self, turma: Turma, aluno_id: int, em: datetime, motivo: MotivoDaSaida
+    ) -> bool:
         """Encerra a matrícula do aluno na turma, se ele ainda está nela."""
         matricula = next(
             (m for m in self._turmas.matriculas_da_turma(turma.id) if m.aluno_id == aluno_id),
@@ -189,7 +233,7 @@ class TurmasEmDia:
         )
         if matricula is None:
             return False
-        self._turmas.encerrar_matricula(matricula.id, em)
+        self._turmas.encerrar_matricula(matricula.id, em, motivo)
         return True
 
 

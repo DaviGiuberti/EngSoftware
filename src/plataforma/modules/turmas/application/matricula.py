@@ -1,7 +1,8 @@
 """Casos de uso do aluno nas turmas (H04, H05, H06, H07, H13, H08): ver as turmas do nível dele,
 matricular-se pagando a primeira mensalidade, entrar na lista de espera, confirmar a vaga
-oferecida e sair da turma. Nas turmas em que está, o aluno vê as faltas da etapa e a prova final
-da última etapa que terminou."""
+oferecida, pagar a mensalidade em aberto e sair da turma. Nas turmas em que está, o aluno vê a
+mensalidade em aberto, as faltas da etapa e a prova final da última etapa que terminou. Quem
+perdeu a vaga por atraso vê o aviso (R55)."""
 
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -26,6 +27,7 @@ from plataforma.modules.turmas.application.em_dia import (
     situacoes_na_prova_final,
 )
 from plataforma.modules.turmas.application.portas import RepositorioDeTurmas
+from plataforma.modules.turmas.domain.horario import Horario
 from plataforma.modules.turmas.domain.lista_de_espera import (
     confirmar,
     entrar,
@@ -39,6 +41,7 @@ from plataforma.modules.turmas.domain.lista_de_espera import (
 )
 from plataforma.modules.turmas.domain.matricula import (
     Matricula,
+    MotivoDaSaida,
     SemMatricula,
     SituacaoNaTurma,
     aula_de_entrada,
@@ -48,10 +51,17 @@ from plataforma.modules.turmas.domain.matricula import (
     exigir_sem_turma_na_materia,
     exigir_vaga,
     situacao_na_turma,
+    vagas_perdidas,
 )
 from plataforma.modules.turmas.domain.mensalidade import (
+    Mensalidade,
+    MensalidadeDevida,
+    SituacaoDaMensalidade,
+    exigir_em_aberto,
     primeira_mensalidade,
+    proxima_mensalidade,
     proximo_vencimento,
+    situacao_da_mensalidade,
 )
 from plataforma.modules.turmas.domain.presenca import faltas_na_etapa
 from plataforma.modules.turmas.domain.turma import Turma, exigir_aberta, horarios_ocupados
@@ -60,8 +70,9 @@ from plataforma.modules.turmas.domain.turma import Turma, exigir_aberta, horario
 @dataclass(frozen=True)
 class TurmaDoAluno:
     """Uma turma como o aluno a vê: a turma, a situação dele nela e o valor da mensalidade. Na
-    turma em que ele está, também as faltas dele na etapa (R08) e a prova final da última etapa
-    que ele terminou nela, com a nota e o resultado (R49)."""
+    turma em que ele está, também a mensalidade seguinte às pagas e a situação dela (R28, R53,
+    R54), as faltas dele na etapa (R08) e a prova final da última etapa que ele terminou nela,
+    com a nota e o resultado (R49)."""
 
     resumo: ResumoDaTurma
     situacao: SituacaoNaTurma
@@ -71,6 +82,8 @@ class TurmaDoAluno:
     proximo_vencimento: date | None = None
     faltas: int | None = None
     prova_final: SituacaoNaProvaFinal | None = None
+    mensalidade_devida: MensalidadeDevida | None = None
+    situacao_da_mensalidade: SituacaoDaMensalidade | None = None
 
 
 @dataclass(frozen=True)
@@ -82,6 +95,26 @@ class MatriculaFeita:
     aula_de_entrada: int
     valor_pago_em_centavos: int
     proximo_vencimento: date
+
+
+@dataclass(frozen=True)
+class MensalidadePaga:
+    """A mensalidade que o aluno pagou e o vencimento da seguinte (R27, R46)."""
+
+    vencimento: date
+    valor_em_centavos: int
+    paga_em: datetime
+    proximo_vencimento: date
+
+
+@dataclass(frozen=True)
+class VagaPerdida:
+    """R55: a turma em que o aluno perdeu a vaga por atraso da mensalidade e quando."""
+
+    turma_id: int
+    nome_da_materia: str
+    horario: Horario
+    perdida_em: datetime
 
 
 class _CasoDoAluno:
@@ -188,6 +221,7 @@ class VerTurmasDoAluno(_CasoDoAluno):
             ocupada = ocupacao(self._turmas, turma, agora)
             na_lista = next((n for n in ocupada.lista if n.aluno_id == aluno.id), None)
             materia = materias[turma.materia_id]
+            devida = self._mensalidade_devida(matricula)
             vistas.append(
                 TurmaDoAluno(
                     resumo=resumir(
@@ -205,6 +239,12 @@ class VerTurmasDoAluno(_CasoDoAluno):
                     proximo_vencimento=self._proximo_vencimento(matricula),
                     faltas=self._faltas(turma, matricula),
                     prova_final=self._prova_final(turma, aluno, agora) if matricula else None,
+                    mensalidade_devida=devida,
+                    situacao_da_mensalidade=(
+                        None
+                        if devida is None
+                        else situacao_da_mensalidade(devida, agora, turma.encerrada_em)
+                    ),
                 )
             )
         return sorted(vistas, key=lambda vista: (vista.resumo.nome_da_materia, vista.resumo.id))
@@ -215,6 +255,13 @@ class VerTurmasDoAluno(_CasoDoAluno):
             return None
         pagas = len(self._turmas.mensalidades(matricula.id))
         return proximo_vencimento(matricula.matriculada_em.date(), pagas)
+
+    def _mensalidade_devida(self, matricula: Matricula | None) -> MensalidadeDevida | None:
+        """R53: a mensalidade seguinte às que o aluno já pagou."""
+        if matricula is None:
+            return None
+        pagas = len(self._turmas.mensalidades(matricula.id))
+        return proxima_mensalidade(matricula.matriculada_em.date(), pagas)
 
     def _faltas(self, turma: Turma, matricula: Matricula | None) -> int | None:
         """R08: as faltas do aluno na etapa, a partir da aula em que ele entrou na turma."""
@@ -308,12 +355,68 @@ class SairDaTurma(_CasoDoAluno):
             )
             if matricula is None:
                 raise SemMatricula()
-            self._turmas.encerrar_matricula(matricula.id, agora)
+            self._turmas.encerrar_matricula(matricula.id, agora, MotivoDaSaida.VONTADE)
             lista = ocupacao(self._turmas, turma, agora).lista
             pode_oferecer = pode_oferecer_em(turma)(agora)
             self._turmas.salvar_lista_de_espera(
                 turma.id, oferecer_vaga(lista, agora, pode_oferecer)
             )
+
+
+class PagarMensalidade(_CasoDoAluno):
+    """H07: o aluno paga a mensalidade em aberto da turma em que está, no valor da matéria. Só ela
+    pode ser paga, desde o vencimento da anterior até o fim da tolerância (R27, R28, R53). Depois
+    que a turma encerra, não há mensalidade a pagar (R54)."""
+
+    def executar(self, aluno: Usuario, turma_id: int) -> MensalidadePaga:
+        exigir_perfil(aluno, Perfil.ALUNO, "pagar a mensalidade")
+        agora = self._relogio.agora()
+        with self._transacao():
+            self._em_dia.aplicar(agora)
+            turma, materia = self._turma_e_materia(turma_id)
+            matricula = next(
+                (m for m in self._turmas.matriculas_da_turma(turma.id) if m.aluno_id == aluno.id),
+                None,
+            )
+            if matricula is None:
+                raise SemMatricula()
+            pagas = len(self._turmas.mensalidades(matricula.id))
+            data_da_matricula = matricula.matriculada_em.date()
+            devida = proxima_mensalidade(data_da_matricula, pagas)
+            exigir_em_aberto(devida, agora, turma.encerrada_em)
+            paga = Mensalidade(devida.vencimento, materia.mensalidade_em_centavos, agora)
+            self._turmas.pagar_mensalidade(matricula.id, paga)
+            return MensalidadePaga(
+                paga.vencimento,
+                paga.valor_em_centavos,
+                paga.paga_em,
+                proximo_vencimento(data_da_matricula, pagas + 1),
+            )
+
+
+class VerVagasPerdidas(_CasoDoAluno):
+    """R55: o aluno vê as turmas em que perdeu a vaga por atraso da mensalidade, até entrar em
+    outra turma da mesma matéria."""
+
+    def executar(self, aluno: Usuario) -> list[VagaPerdida]:
+        exigir_perfil(aluno, Perfil.ALUNO, "ver as vagas perdidas")
+        agora = self._relogio.agora()
+        with self._transacao():
+            self._em_dia.aplicar(agora)
+            matriculas = self._turmas.todas_as_matriculas_do_aluno(aluno.id)
+            turmas = {m.turma_id: obter_turma(self._turmas, m.turma_id) for m in matriculas}
+            nomes = {materia.id: materia.nome for materia in self._materias.listar()}
+            materia_da_turma = {turma_id: turma.materia_id for turma_id, turma in turmas.items()}
+            return [
+                VagaPerdida(
+                    perdida.turma_id,
+                    nomes[materia_da_turma[perdida.turma_id]],
+                    turmas[perdida.turma_id].horario,
+                    perdida.saiu_em,
+                )
+                for perdida in vagas_perdidas(matriculas, materia_da_turma)
+                if perdida.saiu_em is not None
+            ]
 
 
 @dataclass(frozen=True)
@@ -325,3 +428,5 @@ class CasosDeUsoDaMatricula:
     entrar_na_lista: EntrarNaListaDeEspera
     confirmar_vaga: ConfirmarVaga
     sair_da_turma: SairDaTurma
+    pagar_mensalidade: PagarMensalidade
+    ver_vagas_perdidas: VerVagasPerdidas
