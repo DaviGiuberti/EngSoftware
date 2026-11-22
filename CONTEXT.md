@@ -42,10 +42,11 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Termo | Significado | Nome no código |
 |---|---|---|
 | Turma | Grupo de alunos que estuda uma matéria ao vivo com um professor, em dias e horário fixos, com até 12 vagas. É contínua: começa no nível que o ADM escolhe e passa para o nível seguinte a cada etapa, até concluir o nível máximo (R04, R24, R25). | `Turma` |
-| Horário | Dias da semana (1 ou 2) e horas de início e de fim das aulas de uma turma. Não muda durante a vida da turma (R04, R24). | `Horario` |
+| Horário | Dias da semana (1 ou 2) e horas de início e de fim das aulas de uma turma. Não muda durante a vida da turma (R04, R24). | `Horario` (`dias`, `inicio`, `fim`) |
 | Vaga | Lugar de um aluno numa turma. Cada turma tem 12. | `vagas` |
-| Etapa | Período de 24 aulas da turma num nível. Termina depois da 24ª aula, com a prova final (R17). | `Etapa` |
+| Etapa | Período de 24 aulas da turma num nível. Começa na 1ª aula, que na primeira etapa é o primeiro dia da turma depois da criação (R43), e termina depois da 24ª aula, com a prova final (R17). | `Etapa`, `inicio_da_etapa` |
 | Aula | Encontro ao vivo da turma, no horário dela, pelo link do Google Meet. Numerada de 1 a 24 dentro da etapa. | `Aula` |
+| Aula dada | Aula que já começou e não foi marcada como não realizada. É a que conta nas 24 da etapa e no limite da matrícula, até antes da 13ª aula (R19, R43). | `aulas_dadas` |
 | Aula não realizada | Aula que não aconteceu (feriado, professor doente). Não conta nas 24 e é reposta no fim da etapa, no mesmo horário (R18). | `nao_realizada` (situação da `Aula`) |
 | Matrícula | Vínculo do aluno com uma turma. Começa com o pagamento da primeira mensalidade, só antes da 13ª aula da etapa, e guarda a aula de entrada, a partir da qual as faltas contam (R08, R19, R27). | `Matricula` |
 | Lista de espera | Lista, em ordem de entrada, dos alunos que esperam vaga numa turma cheia. Quando abre vaga, o 1º tem 72 horas para confirmar (R05). | `ListaDeEspera` |
