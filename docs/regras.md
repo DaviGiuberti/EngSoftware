@@ -67,6 +67,9 @@ Confirmar a vaga da lista de espera é se matricular: o aluno paga a primeira me
 R45
 A partir da 13ª aula da etapa, a lista de espera da turma não recebe ninguém novo, e a vaga que abre não é oferecida, porque ninguém poderia mais se matricular (R19). (H05, H06)
 
+R50
+No fim da etapa, a lista de espera da turma é esvaziada. Quem está nela é do nível da etapa que terminou (R06) e procura outra turma desse nível. Se a turma passa para o nível seguinte, a etapa nova começa com a lista vazia. (H10)
+
 R06
 O aluno só se matricula em turma do seu nível naquela matéria.
 
@@ -105,6 +108,9 @@ Nunca se pula nível. Ao concluir o nível máximo, a trilha da matéria está c
 R20
 A prova final é aplicada pelo professor fora da plataforma, e ele lança a nota. Se o aluno faltar à prova, o professor decide o que fazer; o sistema não impõe regra. (4.1, 5.4)
 
+R51
+A nota da prova final vai de 0 a 10, com uma casa decimal, como 6,5. (H23)
+
 R21
 Quando a turma sobe, quem não cumpriu a R08 sai dela e procura sozinho outra turma do mesmo nível, onde recomeça o nível. Ele pode entrar no meio de uma etapa, como qualquer aluno (R19). (2.2, 8.2, 9.2)
 
@@ -114,8 +120,14 @@ O professor lança presença e nota só nas próprias turmas. O ADM pode lançar
 R22
 O professor pode corrigir uma presença ou nota até 72 horas depois de lançá-la. Depois disso, só o ADM corrige, e só para cima: se a correção aprova o aluno, ele sobe; se reprova quem já subiu, o nível não muda. (17.4, 18.1, 20.1, 20.2, 20.3)
 
+R52
+Quando a correção do ADM, depois das 72 horas, aprova um aluno que já saiu da turma por reprovação, ele sobe de nível, mas não volta para a turma: procura uma turma do nível novo. Se já tiver entrado noutra turma do nível anterior, continua nela. (H32)
+
 R23
 O aluno reprovado continua na turma, ocupando a vaga, durante as 72 horas de correção da nota; se a nota não mudar, ele sai. O aluno cuja nota ainda não foi lançada também continua na turma ocupando a vaga, até a nota sair. Se o professor não lançar, o ADM lança no lugar dele. (6.2, 8.4, 18.2, 20.4)
+
+R49
+O resultado da etapa de cada aluno (R08) passa a valer quando terminam as 72 horas de correção da nota da prova final, contadas do lançamento (R22). Nesse momento, o aprovado é promovido e o reprovado sai da turma (R21, R23). Como a promoção só acontece depois do prazo, a correção feita dentro dele não desfaz nada. (H09, H24)
 
 R33
 Certificado de nível: emitido quando o aluno sobe de nível pela R08. Certificado de trilha: emitido quando ele conclui o nível máximo da matéria. (14.4)
