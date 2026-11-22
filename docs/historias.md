@@ -675,7 +675,7 @@ Cenário: R51 — a nota tem uma casa decimal
 
 ### H25 · Criar pacote e enviar para revisão
 
-Como professor, quero criar um pacote gravado e enviá-lo para revisão para vendê-lo na plataforma. Prioridade: Alta. Regras: R15.
+Como professor, quero criar um pacote gravado e enviá-lo para revisão para vendê-lo na plataforma. Prioridade: Alta. Regras: R15, R56, R57.
 
 ```gherkin
 Cenário: R15 — pacote novo começa em rascunho
@@ -683,8 +683,8 @@ Cenário: R15 — pacote novo começa em rascunho
   Quando ele cria o pacote "Cinemática", de Física, do N1
   Então o pacote fica em rascunho
 
-Cenário: R15 — enviar para revisão
-  Dado o pacote "Cinemática" em rascunho
+Cenário: R15 e R57 — enviar para revisão
+  Dado o pacote "Cinemática" em rascunho, com 1 aula
   Quando Carlos o envia para revisão
   Então o pacote fica em revisão
 
@@ -697,11 +697,16 @@ Cenário: R15 — o professor não publica
   Dado o pacote "Cinemática" em revisão
   Quando Carlos tenta publicá-lo
   Então o sistema recusa
+
+Cenário: R56 — só na matéria em que o professor está habilitado
+  Dado o professor Carlos, habilitado só em Física
+  Quando ele tenta criar um pacote de Matemática
+  Então o sistema recusa
 ```
 
 ### H26 · Editar pacote publicado
 
-Como professor, quero editar um pacote já publicado para corrigir ou acrescentar aulas sem passar por nova revisão. Prioridade: Média. Regras: R15.
+Como professor, quero editar um pacote já publicado para corrigir ou acrescentar aulas sem passar por nova revisão. Prioridade: Média. Regras: R15, R57, R58.
 
 ```gherkin
 Cenário: R15 — edição sem nova revisão
@@ -713,6 +718,22 @@ Cenário: R15 — edição sem nova revisão
 Cenário: R15 — o preço continua com o ADM
   Dado o pacote "Cinemática" publicado por R$ 120
   Quando Carlos tenta mudar o preço
+  Então o sistema recusa
+
+Cenário: R58 — o pacote publicado não perde aulas
+  Dado o pacote "Cinemática" publicado, com 3 aulas
+  Quando Carlos tenta remover a 2ª aula
+  Então o sistema recusa
+  E o pacote continua com as 3 aulas
+
+Cenário: R58 — a aula precisa ser um vídeo do YouTube
+  Dado o pacote "Cinemática" em rascunho
+  Quando Carlos tenta adicionar uma aula com o link "https://vimeo.com/123"
+  Então o sistema recusa
+
+Cenário: R57 — em revisão, o professor não edita
+  Dado o pacote "Cinemática" em revisão
+  Quando Carlos tenta adicionar uma aula
   Então o sistema recusa
 ```
 
@@ -901,7 +922,7 @@ Cenário: R42 — resultado menor no nivelamento refeito
 
 ### H34 · Revisar e publicar pacote
 
-Como ADM, quero revisar um pacote enviado, definir o preço e publicá-lo ou devolvê-lo ao professor para garantir a qualidade do que é vendido. Prioridade: Alta. Regras: R15, R38.
+Como ADM, quero revisar um pacote enviado, definir o preço e publicá-lo ou devolvê-lo ao professor para garantir a qualidade do que é vendido. Prioridade: Alta. Regras: R15, R38, R59.
 
 ```gherkin
 Cenário: R15 — o ADM define o preço e publica
@@ -924,11 +945,17 @@ Cenário: R15 — o ADM altera o preço
   Dado o pacote "Cinemática" publicado por R$ 120
   Quando o ADM muda o preço para R$ 100
   Então as compras seguintes custam R$ 100
+
+Cenário: R59 — o preço é maior que zero
+  Dado o pacote "Cinemática" em revisão
+  Quando o ADM tenta publicá-lo por R$ 0
+  Então o sistema recusa
+  E o pacote continua em revisão
 ```
 
 ### H35 · Arquivar e publicar de novo
 
-Como ADM, quero arquivar um pacote e, se quiser, publicá-lo de novo, para tirá-lo da vitrine sem prejudicar quem já comprou. Prioridade: Média. Regras: R12, R15.
+Como ADM, quero arquivar um pacote e, se quiser, publicá-lo de novo, para tirá-lo da vitrine sem prejudicar quem já comprou. Prioridade: Média. Regras: R12, R15, R57, R59.
 
 ```gherkin
 Cenário: R15 — pacote arquivado sai da vitrine
@@ -941,10 +968,15 @@ Cenário: R12 — quem comprou mantém o acesso
   Quando o ADM arquiva o pacote em 01/06/2027
   Então o aluno continua com acesso até 10/03/2028
 
-Cenário: R15 — o ADM publica de novo um pacote arquivado
-  Dado o pacote "Cinemática" arquivado
+Cenário: R15 e R59 — o ADM publica de novo um pacote arquivado
+  Dado o pacote "Cinemática" arquivado, com o preço de R$ 120
   Quando o ADM o publica de novo
-  Então o pacote volta para a vitrine
+  Então o pacote volta para a vitrine por R$ 120
+
+Cenário: R57 — o pacote arquivado não é editado
+  Dado o pacote "Cinemática" arquivado
+  Quando Carlos tenta adicionar uma aula
+  Então o sistema recusa
 ```
 
 ### H36 · Ver as métricas
@@ -1093,3 +1125,7 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R53 | H07 |
 | R54 | H10 |
 | R55 | H07 |
+| R56 | H25 |
+| R57 | H25, H26, H35 |
+| R58 | H26 |
+| R59 | H34, H35 |

@@ -83,12 +83,13 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 
 | Termo | Significado | Nome no código |
 |---|---|---|
-| Pacote | Conjunto de aulas gravadas de uma matéria e um nível, vendido junto. Criado pelo professor (R15). | `Pacote` |
-| Estado do pacote | Ponto do pacote no fluxo rascunho → em revisão → publicado → arquivado. O professor envia para revisão; o ADM publica ou devolve, e pode publicar de novo um pacote arquivado (R15). | `EstadoPacote` (`rascunho`, `em_revisao`, `publicado`, `arquivado`) |
-| Aula gravada | Vídeo de um pacote, incorporado do YouTube (não listado). | `AulaGravada` |
+| Pacote | Conjunto de aulas gravadas de uma matéria e um nível, vendido junto. Criado pelo professor, numa matéria em que está habilitado; a matéria e o nível não mudam depois, e só quem o criou o edita (R15, R56). | `Pacote` |
+| Estado do pacote | Ponto do pacote no fluxo rascunho → em revisão → publicado → arquivado. O professor envia para revisão o pacote com pelo menos 1 aula; o ADM publica ou devolve, e pode publicar de novo um pacote arquivado (R15, R57). O professor edita o rascunho e o publicado, nunca o em revisão nem o arquivado (R57). | `EstadoPacote` (`rascunho`, `em_revisao`, `publicado`, `arquivado`) |
+| Devolução | Volta do pacote em revisão para rascunho, pelo ADM, para o professor editá-lo e enviá-lo de novo (R38). | `devolver` |
+| Aula gravada | Vídeo de um pacote, incorporado do YouTube (não listado), com título e link. Numerada de 1 em diante dentro do pacote. No publicado, o professor adiciona e corrige aulas, mas não remove (R58). | `AulaGravada` (`numero`, `titulo`, `link`) |
 | Aula concluída | Marcação do aluno de que terminou uma aula gravada. Conta como atividade de estudo. | `AulaConcluida` |
 | Vitrine | Lista dos pacotes publicados, de todos os níveis, com destaque para os do nível do aluno (R31). | `Vitrine` |
-| Preço | Valor de um pacote. Só o ADM define e altera (R15). | `preco` |
+| Preço | Valor de um pacote, maior que zero. Só o ADM define, ao publicar, e altera depois, no publicado ou no arquivado; a mudança vale para as compras seguintes (R15, R59). | `preco_em_centavos` |
 | Compra | Aquisição simulada de um pacote, que cria um acesso (R12). | `Compra` |
 | Acesso | Direito de assistir a um pacote por 12 meses a partir da compra. Enquanto está ativo, o aluno não compra o mesmo pacote de novo (R12). | `Acesso` |
 | Reembolso | Devolução do valor de uma compra de pacote, pedida até as 23h59 do 7º dia depois da compra (R13). Não existe para mensalidade (R29). | `Reembolso` |
