@@ -195,7 +195,7 @@ Cenário: R45 — a vaga que abre a partir da 13ª aula não é oferecida
 
 ### H07 · Pagar a mensalidade
 
-Como aluno, quero pagar a mensalidade da turma e ver quando vence a próxima para não perder a vaga por atraso. Prioridade: Média. Regras: R27, R28, R37, R46.
+Como aluno, quero pagar a mensalidade da turma e ver quando vence a próxima para não perder a vaga por atraso. Prioridade: Média. Regras: R27, R28, R37, R46, R53, R55.
 
 ```gherkin
 Cenário: R27 — vencimento no dia da matrícula
@@ -208,11 +208,12 @@ Cenário: R46 — vencimento no último dia do mês
   Quando ele abre a turma em 10/02
   Então ele vê a próxima mensalidade com vencimento em 28/02
 
-Cenário: R27 — pagamento em dia
+Cenário: R27 e R53 — pagamento em dia
   Dada a mensalidade de 10/04 em aberto
   Quando o aluno paga em 08/04
   Então a mensalidade fica paga
   E a próxima vence em 10/05
+  E ela só pode ser paga a partir de 10/04
 
 Cenário: R28 — pagamento atrasado dentro da tolerância
   Dada a mensalidade de 10/04 sem pagamento
@@ -220,10 +221,11 @@ Cenário: R28 — pagamento atrasado dentro da tolerância
   Então ele continua na turma
   E a próxima mensalidade vence em 10/05
 
-Cenário: R28 — atraso além da tolerância
+Cenário: R28 e R55 — atraso além da tolerância
   Dada a mensalidade de 10/04 sem pagamento até 17/04 às 23h59
   Quando chega 18/04
   Então o aluno perde a vaga e sai da turma
+  E ele vê o aviso de que perdeu a vaga por atraso da mensalidade
 ```
 
 ### H08 · Acompanhar faltas e nota
@@ -282,7 +284,7 @@ Cenário: R09 — aprovação no nível máximo conclui a trilha
 
 ### H10 · Seguir com a mesma turma
 
-Como aluno, quero que minha turma avance de nível comigo, com o mesmo professor, até o fim da trilha, para seguir com o mesmo grupo sem procurar turma nova a cada nível. Prioridade: Alta. Regras: R04, R09, R25, R26.
+Como aluno, quero que minha turma avance de nível comigo, com o mesmo professor, até o fim da trilha, para seguir com o mesmo grupo sem procurar turma nova a cada nível. Prioridade: Alta. Regras: R04, R09, R25, R26, R54.
 
 ```gherkin
 Cenário: R04 e R26 — a turma passa para o nível seguinte com o mesmo professor
@@ -296,10 +298,11 @@ Cenário: R04 — o aluno promovido continua na turma
   Quando a turma passa para o N3
   Então Ana continua matriculada, sem nova matrícula
 
-Cenário: R09 — a turma encerra depois do nível máximo
+Cenário: R09 e R54 — a turma encerra depois do nível máximo
   Dada uma turma de Física no N3, o nível máximo
   Quando a etapa do N3 termina
   Então a turma é encerrada
+  E nenhuma mensalidade dos alunos que continuam nela vence depois disso
 
 Cenário: R25 — o ADM não encerra turma aberta
   Dada uma turma de Física no N2
@@ -1087,3 +1090,6 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R50 | H11 |
 | R51 | H24 |
 | R52 | H32 |
+| R53 | H07 |
+| R54 | H10 |
+| R55 | H07 |
