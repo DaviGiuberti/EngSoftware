@@ -2,11 +2,12 @@
 ao 1º da lista com 72 horas para confirmar (R05), saída de quem não confirma (R35), nada de
 oferta a partir da 13ª aula (R45) e saída das outras listas da matéria (R44)."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 import pytest
 
 from plataforma.compartilhado.horario import BRASILIA
+from plataforma.modules.turmas.domain.horario import DiaDaSemana, novo_horario
 from plataforma.modules.turmas.domain.lista_de_espera import (
     JaEstaNaLista,
     ListaDeEspera,
@@ -20,11 +21,13 @@ from plataforma.modules.turmas.domain.lista_de_espera import (
     exigir_lista_aberta,
     exigir_turma_cheia,
     oferecer_vaga,
+    pode_oferecer_em,
     posicao,
     reservadas,
     sair,
     vencer_prazos,
 )
+from plataforma.modules.turmas.domain.turma import Turma
 
 ANA, BRUNO, CARLA = 1, 2, 3
 SAIU_EM_10_03_14H = datetime(2027, 3, 10, 14, 0, tzinfo=BRASILIA)
@@ -108,6 +111,17 @@ def test_r45_a_vaga_que_abre_a_partir_da_13a_aula_nao_e_oferecida() -> None:
 
     assert prazos(lista) == {ANA: None, BRUNO: None}
     assert reservadas(lista) == 0
+
+
+def test_r45_a_turma_oferece_a_vaga_ate_antes_de_comecar_a_13a_aula_da_etapa() -> None:
+    # Turma de terça e quinta com a 1ª aula na terça 24/11/2026: a 13ª é na terça 05/01/2027.
+    horario = novo_horario([DiaDaSemana.TERCA, DiaDaSemana.QUINTA], time(19), time(20, 30))
+    turma = Turma(1, 1, 2, 10, horario, datetime(2026, 11, 24, 19, 0, tzinfo=BRASILIA))
+
+    pode_oferecer = pode_oferecer_em(turma)
+
+    assert pode_oferecer(datetime(2027, 1, 5, 18, 59, tzinfo=BRASILIA))
+    assert not pode_oferecer(datetime(2027, 1, 5, 19, 0, tzinfo=BRASILIA))
 
 
 def test_r05_ana_confirma_as_13h59_de_13_03_e_sai_da_lista() -> None:

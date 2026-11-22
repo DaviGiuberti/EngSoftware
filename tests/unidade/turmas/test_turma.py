@@ -1,8 +1,9 @@
-"""Turma (H30, H31): nível inicial da matéria e horário fixo (R24), 12 vagas (R04), professor sem
-conflito de horário (R07) e troca de professor (R26)."""
+"""Turma (H30, H31, H10): nível inicial da matéria e horário fixo (R24), 12 vagas (R04), professor
+sem conflito de horário (R07) e troca de professor (R26). No fim de cada etapa, a turma passa para
+o nível seguinte (R04) e, depois do nível máximo, encerra (R09). Ninguém a encerra antes (R25)."""
 
 from dataclasses import replace
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 import pytest
 
@@ -11,13 +12,22 @@ from plataforma.modules.turmas.domain.horario import DiaDaSemana, novo_horario
 from plataforma.modules.turmas.domain.turma import (
     VAGAS_POR_TURMA,
     ConflitoDeHorario,
+    Encerramento,
     HorarioFixo,
     MesmoProfessor,
     NivelForaDaMateria,
+    PassagemDeEtapa,
     Turma,
+    TurmaAberta,
+    TurmaEncerrada,
     TurmaNova,
+    com_a_mudanca,
+    encerrar,
+    exigir_aberta,
     exigir_nivel_da_materia,
     exigir_professor_livre,
+    horarios_ocupados,
+    mudancas_ate,
     mudar_horario,
     nova_turma,
     trocar_professor,
@@ -117,3 +127,92 @@ def test_r18_a_turma_nao_conta_entre_as_dadas_a_aula_nao_realizada() -> None:
     assert TURMA_DE_FISICA.aulas_dadas(sexta_27_11) == 2
     assert com_nao_realizada.aulas_dadas(sexta_27_11) == 1
     assert com_nao_realizada.calendario()[1].numero is None
+
+
+# A etapa do N2 da TURMA_DE_FISICA termina no fim da 24ª aula, na quinta 11/02/2027 às 20h30, e a
+# do N3 começaria na terça 16/02, às 19h. Física tem 3 níveis.
+FIM_DO_N2 = datetime(2027, 2, 11, 20, 30, tzinfo=BRASILIA)
+TERCA_16_02_19H = datetime(2027, 2, 16, 19, 0, tzinfo=BRASILIA)
+
+
+def test_r04_r26_no_fim_da_etapa_do_n2_a_turma_passa_para_o_n3_com_o_mesmo_professor() -> None:
+    [passagem] = mudancas_ate(TURMA_DE_FISICA, nivel_maximo=3, agora=FIM_DO_N2)
+
+    no_n3 = com_a_mudanca(TURMA_DE_FISICA, passagem)
+
+    assert passagem.em == FIM_DO_N2
+    assert (no_n3.nivel, no_n3.professor_id, no_n3.horario) == (3, CARLOS, TER_E_QUI_19H)
+
+
+def test_r04_a_etapa_nova_comeca_a_partir_da_1a_aula_no_proximo_dia_da_turma() -> None:
+    [passagem] = mudancas_ate(TURMA_DE_FISICA, nivel_maximo=3, agora=FIM_DO_N2)
+
+    no_n3 = com_a_mudanca(TURMA_DE_FISICA, passagem)
+
+    assert no_n3.inicio_da_etapa == TERCA_16_02_19H
+    assert no_n3.aulas_dadas(FIM_DO_N2) == 0
+    assert no_n3.nao_realizadas == frozenset()
+
+
+def test_r17_antes_do_fim_da_24a_aula_a_turma_continua_na_etapa() -> None:
+    assert mudancas_ate(TURMA_DE_FISICA, 3, FIM_DO_N2 - timedelta(minutes=1)) == []
+
+
+def test_r09_no_fim_da_etapa_do_nivel_maximo_a_turma_encerra() -> None:
+    no_n3 = replace(TURMA_DE_FISICA, nivel=3)
+
+    [encerramento] = mudancas_ate(no_n3, nivel_maximo=3, agora=FIM_DO_N2)
+
+    assert encerramento == Encerramento(FIM_DO_N2)
+    assert com_a_mudanca(no_n3, encerramento).encerrada
+
+
+def test_r04_r09_a_turma_passa_por_cada_etapa_que_terminou_e_encerra_no_nivel_maximo() -> None:
+    um_ano_depois = datetime(2027, 11, 24, tzinfo=BRASILIA)
+
+    mudancas = mudancas_ate(TURMA_DE_FISICA, nivel_maximo=3, agora=um_ano_depois)
+
+    assert [type(mudanca) for mudanca in mudancas] == [PassagemDeEtapa, Encerramento]
+    passagem, encerramento = mudancas
+    assert isinstance(passagem, PassagemDeEtapa)
+    assert encerramento.em == passagem.etapa.fim
+
+
+def test_r09_a_turma_encerrada_nao_muda_mais() -> None:
+    encerrada = replace(TURMA_DE_FISICA, nivel=3, encerrada_em=FIM_DO_N2)
+
+    assert mudancas_ate(encerrada, 3, datetime(2028, 1, 1, tzinfo=BRASILIA)) == []
+
+
+def test_r25_o_adm_nao_encerra_a_turma_aberta() -> None:
+    with pytest.raises(
+        TurmaAberta,
+        match="A turma não pode ser encerrada: ela encerra sozinha no fim da etapa do N3, o "
+        "nível máximo.",
+    ):
+        encerrar(TURMA_DE_FISICA, nivel_maximo=3)
+
+
+def test_r25_a_turma_encerrada_nao_e_encerrada_de_novo() -> None:
+    encerrada = replace(TURMA_DE_FISICA, nivel=3, encerrada_em=FIM_DO_N2)
+
+    with pytest.raises(TurmaEncerrada, match="Esta turma já está encerrada."):
+        encerrar(encerrada, nivel_maximo=3)
+
+
+def test_r09_a_turma_encerrada_nao_recebe_matricula_nem_lista_de_espera() -> None:
+    encerrada = replace(TURMA_DE_FISICA, nivel=3, encerrada_em=FIM_DO_N2)
+
+    with pytest.raises(
+        TurmaEncerrada, match="Esta turma foi encerrada: ela concluiu o nível máximo da matéria."
+    ):
+        exigir_aberta(encerrada)
+    exigir_aberta(TURMA_DE_FISICA)
+
+
+def test_r07_a_turma_encerrada_nao_ocupa_mais_o_horario() -> None:
+    encerrada = replace(TURMA_DE_FISICA, id=2, encerrada_em=FIM_DO_N2)
+    quarta_19h = novo_horario([DiaDaSemana.QUARTA], time(19), time(20, 30))
+    aberta = replace(TURMA_DE_FISICA, id=3, horario=quarta_19h)
+
+    assert horarios_ocupados([encerrada, aberta]) == [quarta_19h]
