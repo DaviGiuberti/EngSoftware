@@ -67,6 +67,7 @@ from plataforma.modules.turmas.application.presenca import LancarPresenca
 from plataforma.modules.turmas.application.prova_final import LancarNota
 from plataforma.modules.turmas.domain.horario import DiaDaSemana
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
+from tests.integracao.conftest import pagar_mensalidades
 
 # Sem tela: a janela não aparece durante os testes, e o mesmo teste roda na CI.
 # Para ver a janela, rode com a variável QT_QPA_PLATFORM=windows.
@@ -286,6 +287,12 @@ class App:
                 self._em_dia(conexao),
             )
             matricular.executar(aluno, turma_id)
+
+    def preparar_mensalidades(self, aluno: Usuario, turma_id: int, quantas: int = 12) -> None:
+        """Grava, antes de abrir o app, as próximas mensalidades do aluno como pagas em dia, para
+        ele não perder a vaga por atraso (R28) nos testes que avançam meses."""
+        with self._no_banco() as (conexao, _, _):
+            pagar_mensalidades(conexao, aluno.id, turma_id, quantas)
 
     def preparar_presenca(
         self, turma_id: int, data_da_aula: date, ausentes: Sequence[Usuario] = ()

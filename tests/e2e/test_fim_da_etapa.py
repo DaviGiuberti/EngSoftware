@@ -45,6 +45,9 @@ def preparar_turma_com_ana_e_bruno(app: App, nivel: int = 2) -> tuple[int, Usuar
     bruno = app.preparar_aluno("bruno@exemplo.com", {"Física": nivel})
     app.preparar_matricula(ana, turma_id)
     app.preparar_matricula(bruno, turma_id)
+    # Com as mensalidades pagas, eles não perdem a vaga por atraso até o fim da etapa (R28).
+    app.preparar_mensalidades(ana, turma_id)
+    app.preparar_mensalidades(bruno, turma_id)
     return turma_id, ana, bruno
 
 
