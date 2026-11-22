@@ -49,6 +49,6 @@ class RepositorioDeNivelamentos(Protocol):
         """Guarda a trilha concluída (R09). Se o aluno já a concluiu antes, nada muda."""
         ...
 
-    def trilhas_concluidas(self, aluno_id: int) -> set[int]:
-        """O id das matérias em que o aluno concluiu a trilha."""
+    def trilhas_concluidas(self, aluno_id: int) -> dict[int, datetime]:
+        """Quando o aluno concluiu a trilha, pelo id de cada matéria em que a concluiu."""
         ...

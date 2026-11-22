@@ -1,5 +1,5 @@
-"""Telas do aluno no nivelamento: o nível em cada matéria, com a trilha concluída (H03), e o
-teste (H01, H02)."""
+"""Telas do aluno no nivelamento: o nível em cada matéria, com a trilha concluída (H03), o teste
+(H01, H02) e os certificados de nível e de trilha (H12)."""
 
 import math
 from collections.abc import Callable
@@ -25,13 +25,15 @@ from plataforma.acoes import Falhou, Feito, executar
 from plataforma.modules.identidade.domain.usuario import Usuario
 from plataforma.modules.materias.domain.materia import nome_do_nivel
 from plataforma.modules.nivelamento.application.casos_de_uso import CasosDeUsoDoNivelamento
+from plataforma.modules.nivelamento.application.certificados import CertificadoDoAluno
 from plataforma.modules.nivelamento.application.fazer_nivelamento import (
     EstadoDoNivelamento,
     NivelNaMateria,
 )
+from plataforma.modules.nivelamento.domain.certificado import TipoDeCertificado
 from plataforma.modules.nivelamento.domain.nivelamento import SituacaoNaMateria
 from plataforma.modules.nivelamento.domain.questao import LETRAS_DAS_ALTERNATIVAS
-from plataforma.ui_comum import mostrar_recusa, titulo
+from plataforma.ui_comum import mostrar_aviso, mostrar_recusa, titulo
 
 INTERVALO_DO_REGISTRO_EM_MS = 15_000
 TEXTO_DO_BOTAO = {
@@ -39,6 +41,16 @@ TEXTO_DO_BOTAO = {
     SituacaoNaMateria.EM_ANDAMENTO: "Continuar nivelamento",
     SituacaoNaMateria.REFAZER_LIBERADO: "Refazer nivelamento",
 }
+
+
+NOME_DO_CERTIFICADO = {
+    TipoDeCertificado.NIVEL: "Certificado de nível",
+    TipoDeCertificado.TRILHA: "Certificado de trilha",
+}
+SEM_CERTIFICADOS = (
+    "Você ainda não tem certificados. O certificado de nível sai quando você é aprovado na etapa "
+    "de uma turma, e o de trilha, quando é aprovado no nível máximo da matéria."
+)
 
 
 def formatar_tempo(tempo: timedelta) -> str:
@@ -362,6 +374,57 @@ def _primeira_sem_resposta(estado: EstadoDoNivelamento) -> int:
         (i for i, questao in enumerate(estado.questoes) if questao.id not in estado.respostas),
         len(estado.questoes) - 1,
     )
+
+
+class TelaMeusCertificados(QWidget):
+    """H12: os certificados de nível e de trilha do aluno, na ordem em que foram emitidos, com a
+    data em que o resultado da etapa valeu (R33, R36)."""
+
+    def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUsoDoNivelamento) -> None:
+        super().__init__()
+        self._usuario = usuario
+        self._casos_de_uso = casos_de_uso
+        self.tabela = QTableWidget(0, 4)
+        self.tabela.setHorizontalHeaderLabels(["Matéria", "Certificado", "Nível", "Emitido em"])
+        self.tabela.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.tabela.verticalHeader().setVisible(False)
+        cabecalho = self.tabela.horizontalHeader()
+        cabecalho.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        cabecalho.setStretchLastSection(True)
+        self.mensagem = QLabel()
+        self.mensagem.setWordWrap(True)
+        coluna = QVBoxLayout(self)
+        coluna.addWidget(titulo("Meus certificados"))
+        coluna.addWidget(self.tabela, 1)
+        coluna.addWidget(self.mensagem)
+        self.recarregar()
+
+    def recarregar(self) -> None:
+        self.mensagem.clear()
+        resultado = executar(
+            "ver os próprios certificados",
+            self._usuario.email,
+            lambda: self._casos_de_uso.ver_meus_certificados.executar(self._usuario),
+        )
+        match resultado:
+            case Feito(emitidos):
+                self._preencher(emitidos)
+            case Falhou(mensagem):
+                mostrar_recusa(self.mensagem, mensagem)
+
+    def _preencher(self, emitidos: list[CertificadoDoAluno]) -> None:
+        self.tabela.setRowCount(len(emitidos))
+        for linha, certificado in enumerate(emitidos):
+            valores = [
+                certificado.nome_da_materia,
+                NOME_DO_CERTIFICADO[certificado.tipo],
+                nome_do_nivel(certificado.nivel),
+                f"{certificado.emitido_em:%d/%m/%Y}",
+            ]
+            for coluna, valor in enumerate(valores):
+                self.tabela.setItem(linha, coluna, QTableWidgetItem(valor))
+        if not emitidos:
+            mostrar_aviso(self.mensagem, SEM_CERTIFICADOS)
 
 
 class AreaDoAluno(QStackedWidget):

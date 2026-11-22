@@ -66,7 +66,7 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Resultado da etapa | Situação do aluno no fim da etapa: aprovado (no máximo 6 faltas e nota ≥ 7), reprovado ou pendente, quando a nota ainda não foi lançada (R08, R23). Passa a valer quando terminam as 72 horas de correção da nota: aí o aprovado é promovido, e o reprovado sai da turma (R49). | `ResultadoEtapa` (`aprovado`, `reprovado`, `pendente`) |
 | Promoção | Subida de exatamente um nível no fim da etapa, para o aluno aprovado, quando o resultado passa a valer (R08, R09, R49). Fica guardada com a data, que a M1 e os certificados usam. Nas regras também aparece como "subir de nível". | `Promocao` |
 | Trilha concluída | Aprovação na etapa do nível máximo da matéria. O aluno continua no nível máximo, e a turma encerra (R09). | `trilha_concluida` |
-| Certificado | Documento emitido pela plataforma: de nível, na promoção; de trilha, ao concluir o nível máximo; de pacote, fora do MVP (R16, R33). | `Certificado` (`nivel`, `trilha`, `pacote`) |
+| Certificado | Documento emitido pela plataforma: de nível, na promoção; de trilha, ao concluir o nível máximo; de pacote, fora do MVP (R16, R33). O de nível é do nível em que o aluno foi aprovado, e a aprovação no nível máximo dá o de nível e o de trilha (R36). Os dois têm a data em que o resultado valeu e aparecem na aba "Meus certificados" do aluno. | `Certificado` (`nivel`, `trilha`, `pacote`) |
 
 ## Mensalidade
 

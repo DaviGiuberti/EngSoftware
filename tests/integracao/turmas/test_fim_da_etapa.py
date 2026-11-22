@@ -1,7 +1,7 @@
-"""Fim da etapa com o banco SQLite e um relógio de teste (H23, H09, H10, H11, H24, H32, H20, H03):
-a turma passa de nível e encerra, a nota da prova final é lançada e corrigida, e o resultado vale
-no fim das 72 horas de correção, com a promoção ou a saída da turma. R04, R07, R08, R09, R10,
-R17, R19, R20 a R23, R25, R26, R48, R49 a R52, RNF05 e RNF07."""
+"""Fim da etapa com o banco SQLite e um relógio de teste (H23, H09, H10, H11, H24, H32, H20, H03,
+H12): a turma passa de nível e encerra, a nota da prova final é lançada e corrigida, e o resultado
+vale no fim das 72 horas de correção, com a promoção e os certificados ou a saída da turma. R04,
+R07, R08, R09, R10, R17, R19, R20 a R23, R25, R26, R33, R36, R48, R49 a R52, RNF05 e RNF07."""
 
 import shutil
 import sqlite3
@@ -39,9 +39,11 @@ from plataforma.modules.materias.domain.materia import Materia
 from plataforma.modules.materias.infra.repositorio_de_materias import (
     RepositorioDeMateriasSqlite,
 )
+from plataforma.modules.nivelamento.application.certificados import VerMeusCertificados
 from plataforma.modules.nivelamento.application.consulta_de_niveis import ConsultaDeNiveis
 from plataforma.modules.nivelamento.application.fazer_nivelamento import VerMeusNiveis
 from plataforma.modules.nivelamento.application.promocao import Promocoes
+from plataforma.modules.nivelamento.domain.certificado import TipoDeCertificado
 from plataforma.modules.nivelamento.domain.nivelamento import NivelDoAluno
 from plataforma.modules.nivelamento.domain.promocao import Promocao
 from plataforma.modules.nivelamento.infra.repositorio_de_nivelamentos import (
@@ -138,6 +140,7 @@ class Escola:
     lancar_nota: LancarNota
     corrigir_nota: CorrigirNota
     ver_meus_niveis: VerMeusNiveis
+    ver_meus_certificados: VerMeusCertificados
     niveis: ConsultaDeNiveis
     promocoes: Promocoes
     turmas: RepositorioDeTurmasSqlite
@@ -219,6 +222,16 @@ class Escola:
         prova = self.na_prova_final(turma, aluno, nivel).prova
         return None if prova is None else str(prova.nota)
 
+    def certificados(
+        self, aluno: Usuario
+    ) -> list[tuple[str, TipoDeCertificado, int, datetime]]:
+        """Os certificados do aluno com as turmas em dia, como o app faz ao abrir a aba."""
+        self.atualizar.executar()
+        return [
+            (c.nome_da_materia, c.tipo, c.nivel, c.emitido_em)
+            for c in self.ver_meus_certificados.executar(aluno)
+        ]
+
 
 @pytest.fixture
 def escola(
@@ -262,6 +275,7 @@ def escola(
         ver_meus_niveis=VerMeusNiveis(
             nivelamentos, RepositorioDeQuestoesSqlite(conexao), materias
         ),
+        ver_meus_certificados=VerMeusCertificados(nivelamentos, materias),
         niveis=niveis,
         promocoes=promocoes,
         turmas=turmas,
@@ -886,6 +900,75 @@ def test_rnf05_erro_ao_promover_nao_deixa_os_resultados_pela_metade(
     ]
     provas = escola.turmas.provas_finais(no_n2.turma.id, 2)
     assert [prova.resultado_aplicado for prova in provas] == [None, None]
+
+
+# H12: os certificados de nível e de trilha.
+
+
+def test_r33_ana_promovida_do_n1_para_o_n2_recebe_o_certificado_de_nivel_do_n1(
+    escola: Escola, fisica: Materia, carlos: Usuario
+) -> None:
+    no_n1 = turma_com_ana_e_bruno(escola, fisica, carlos, 1)
+    escola.ir_para(NOTA_EM_10_03_AS_10H)
+    escola.lancar_nota.executar(carlos, no_n1.turma.id, 1, no_n1.ana.id, "8")
+
+    escola.ir_para(em(13, 3))
+
+    assert escola.certificados(no_n1.ana) == [
+        ("Física", TipoDeCertificado.NIVEL, 1, em(13, 3))
+    ]
+
+
+def test_r36_ana_aprovada_no_n3_recebe_o_certificado_de_nivel_do_n3_e_o_de_trilha(
+    escola: Escola, fisica: Materia, carlos: Usuario
+) -> None:
+    no_n3 = turma_com_ana_e_bruno(escola, fisica, carlos, 3)
+    escola.ir_para(NOTA_EM_10_03_AS_10H)
+    escola.lancar_nota.executar(carlos, no_n3.turma.id, 3, no_n3.ana.id, "8")
+
+    escola.ir_para(em(13, 3))
+
+    assert escola.certificados(no_n3.ana) == [
+        ("Física", TipoDeCertificado.NIVEL, 3, em(13, 3)),
+        ("Física", TipoDeCertificado.TRILHA, 3, em(13, 3)),
+    ]
+
+
+def test_r33_bruno_reprovado_no_n2_nao_recebe_certificado(
+    escola: Escola, carlos: Usuario, no_n2: TurmaDoCarlos
+) -> None:
+    escola.ir_para(NOTA_EM_10_03_AS_10H)
+    escola.lancar_nota.executar(carlos, no_n2.turma.id, 2, no_n2.bruno.id, "5")
+
+    escola.ir_para(em(13, 3))
+
+    assert escola.certificados(no_n2.bruno) == []
+
+
+def test_r33_quem_ficou_no_n3_pelo_nivelamento_nao_tem_certificado_do_n1_nem_do_n2(
+    escola: Escola, fisica: Materia
+) -> None:
+    carla = escola.aluno("carla@exemplo.com", fisica, 3)
+
+    assert escola.certificados(carla) == []
+
+
+def test_r22_r33_a_promocao_pela_correcao_do_adm_tambem_da_o_certificado(
+    escola: Escola, nota_6_da_ana: TurmaDoCarlos
+) -> None:
+    situacao = nota_6_da_ana
+    escola.ir_para(em(20, 3))
+
+    escola.corrigir_nota.executar(ADM, situacao.turma.id, 2, situacao.ana.id, "7")
+
+    assert escola.certificados(situacao.ana) == [
+        ("Física", TipoDeCertificado.NIVEL, 2, em(20, 3))
+    ]
+
+
+def test_rnf07_so_o_aluno_ve_os_proprios_certificados(escola: Escola, carlos: Usuario) -> None:
+    with pytest.raises(AcessoNegado, match="Só o aluno pode ver os próprios certificados."):
+        escola.ver_meus_certificados.executar(carlos)
 
 
 def test_rnf16_a_turma_criada_antes_da_migracao_0010_continua_na_etapa_que_tinha(

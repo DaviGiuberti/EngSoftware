@@ -46,6 +46,7 @@ from plataforma.modules.nivelamento.application.casos_de_uso import (
     CasosDeUsoDoNivelamento,
     ListarQuestoes,
 )
+from plataforma.modules.nivelamento.application.certificados import VerMeusCertificados
 from plataforma.modules.nivelamento.application.consulta_de_niveis import ConsultaDeNiveis
 from plataforma.modules.nivelamento.application.fazer_nivelamento import (
     ConcluirNivelamento,
@@ -183,6 +184,7 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
             fechar=FecharNivelamento(*do_aluno),
             concluir=ConcluirNivelamento(*do_aluno),
             ver_meus_niveis=VerMeusNiveis(nivelamentos, questoes, consulta_de_materias),
+            ver_meus_certificados=VerMeusCertificados(nivelamentos, consulta_de_materias),
             dar_mais_tempo=DarMaisTempo(
                 nivelamentos, consulta_de_materias, alunos, relogio, em_transacao
             ),
