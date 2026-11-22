@@ -17,7 +17,6 @@ from plataforma.modules.identidade.domain.professor import exigir_habilitacao
 from plataforma.modules.identidade.domain.usuario import Perfil, Usuario
 from plataforma.modules.materias.application.casos_de_uso import ConsultaDeMaterias
 from plataforma.modules.turmas.application.portas import RepositorioDeTurmas
-from plataforma.modules.turmas.domain.etapa import aulas_dadas
 from plataforma.modules.turmas.domain.horario import DiaDaSemana, Horario, novo_horario
 from plataforma.modules.turmas.domain.lista_de_espera import (
     ListaDeEspera,
@@ -81,7 +80,7 @@ def pode_oferecer_em(turma: Turma) -> Callable[[datetime], bool]:
     """R45: a vaga que abre só é oferecida à lista de espera antes da 13ª aula da etapa."""
 
     def pode_oferecer(momento: datetime) -> bool:
-        return matricula_aberta(aulas_dadas(turma.horario, turma.inicio_da_etapa, momento))
+        return matricula_aberta(turma.aulas_dadas(momento))
 
     return pode_oferecer
 
@@ -108,7 +107,7 @@ def resumir(
         email_do_professor=email_do_professor,
         horario=turma.horario,
         inicio_da_etapa=turma.inicio_da_etapa,
-        aulas_dadas=aulas_dadas(turma.horario, turma.inicio_da_etapa, agora),
+        aulas_dadas=turma.aulas_dadas(agora),
         vagas_livres=ocupada.vagas_livres,
     )
 

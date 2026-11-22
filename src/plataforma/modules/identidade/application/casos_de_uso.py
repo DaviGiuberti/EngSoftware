@@ -70,7 +70,7 @@ class Entrar:
 
 
 class ConsultaDeAlunos:
-    """Os outros módulos acham um aluno pelo e-mail (ADR 0002)."""
+    """Os outros módulos acham um aluno pelo e-mail ou pelo id (ADR 0002)."""
 
     def __init__(self, usuarios: RepositorioDeUsuarios) -> None:
         self._usuarios = usuarios
@@ -80,6 +80,12 @@ class ConsultaDeAlunos:
         if credencial is None or credencial.usuario.perfil != Perfil.ALUNO:
             raise AlunoNaoEncontrado()
         return credencial.usuario
+
+    def obter(self, aluno_id: int) -> Usuario:
+        usuario = self._usuarios.buscar(aluno_id)
+        if usuario is None or usuario.perfil != Perfil.ALUNO:
+            raise AlunoNaoEncontrado()
+        return usuario
 
 
 class CadastrarProfessor:

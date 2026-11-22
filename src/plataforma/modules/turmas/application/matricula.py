@@ -21,7 +21,6 @@ from plataforma.modules.turmas.application.casos_de_uso import (
     resumir,
 )
 from plataforma.modules.turmas.application.portas import RepositorioDeTurmas
-from plataforma.modules.turmas.domain.etapa import aulas_dadas
 from plataforma.modules.turmas.domain.lista_de_espera import (
     confirmar,
     entrar,
@@ -48,12 +47,14 @@ from plataforma.modules.turmas.domain.mensalidade import (
     primeira_mensalidade,
     proximo_vencimento,
 )
+from plataforma.modules.turmas.domain.presenca import faltas
 from plataforma.modules.turmas.domain.turma import Turma
 
 
 @dataclass(frozen=True)
 class TurmaDoAluno:
-    """Uma turma como o aluno a vê: a turma, a situação dele nela e o valor da mensalidade."""
+    """Uma turma como o aluno a vê: a turma, a situação dele nela e o valor da mensalidade. Na
+    turma em que ele está, também as faltas dele na etapa (R08)."""
 
     resumo: ResumoDaTurma
     situacao: SituacaoNaTurma
@@ -61,6 +62,7 @@ class TurmaDoAluno:
     posicao_na_lista: int | None = None
     prazo_para_confirmar: datetime | None = None
     proximo_vencimento: date | None = None
+    faltas: int | None = None
 
 
 @dataclass(frozen=True)
@@ -117,7 +119,7 @@ class _CasoDoAluno:
         """R06, R44, R07 e R19: valem na matrícula e na confirmação da vaga (R47)."""
         minhas = self._exigir_nivel_e_nenhuma_turma_na_materia(aluno, turma, materia)
         exigir_aluno_livre(turma.horario, [minha.horario for minha in minhas])
-        exigir_matricula_aberta(aulas_dadas(turma.horario, turma.inicio_da_etapa, agora))
+        exigir_matricula_aberta(turma.aulas_dadas(agora))
 
     def _matricular(
         self, aluno: Usuario, turma: Turma, materia: Materia, agora: datetime
@@ -131,9 +133,7 @@ class _CasoDoAluno:
         self._sair_das_listas_da_materia(aluno, materia, agora)
         return MatriculaFeita(
             matricula=matricula,
-            aula_de_entrada=aula_de_entrada(
-                aulas_dadas(turma.horario, turma.inicio_da_etapa, agora)
-            ),
+            aula_de_entrada=aula_de_entrada(turma.aulas_dadas(agora)),
             valor_pago_em_centavos=primeira.valor_em_centavos,
             proximo_vencimento=proximo_vencimento(agora.date(), mensalidades_pagas=1),
         )
@@ -185,6 +185,7 @@ class VerTurmasDoAluno(_CasoDoAluno):
                     posicao_na_lista=posicao(ocupada.lista, aluno.id) if na_lista else None,
                     prazo_para_confirmar=na_lista.prazo if na_lista else None,
                     proximo_vencimento=self._proximo_vencimento(matricula),
+                    faltas=self._faltas(turma, matricula),
                 )
             )
         return sorted(vistas, key=lambda vista: (vista.resumo.nome_da_materia, vista.resumo.id))
@@ -195,6 +196,18 @@ class VerTurmasDoAluno(_CasoDoAluno):
             return None
         pagas = len(self._turmas.mensalidades(matricula.id))
         return proximo_vencimento(matricula.matriculada_em.date(), pagas)
+
+    def _faltas(self, turma: Turma, matricula: Matricula | None) -> int | None:
+        """R08: as faltas do aluno na etapa, a partir da aula em que ele entrou na turma."""
+        if matricula is None:
+            return None
+        presencas = [
+            presenca
+            for presenca in self._turmas.presencas(turma.id, turma.nivel)
+            if presenca.aluno_id == matricula.aluno_id
+        ]
+        entrada = aula_de_entrada(turma.aulas_dadas(matricula.matriculada_em))
+        return faltas(presencas, turma.calendario(), entrada)
 
 
 class Matricular(_CasoDoAluno):
@@ -222,7 +235,7 @@ class EntrarNaListaDeEspera(_CasoDoAluno):
         with self._transacao():
             turma, materia = self._turma_e_materia(turma_id)
             self._exigir_nivel_e_nenhuma_turma_na_materia(aluno, turma, materia)
-            exigir_lista_aberta(aulas_dadas(turma.horario, turma.inicio_da_etapa, agora))
+            exigir_lista_aberta(turma.aulas_dadas(agora))
             ocupada = ocupacao(self._turmas, turma, agora)
             exigir_turma_cheia(ocupada.vagas_livres)
             lista = entrar(ocupada.lista, aluno.id, agora)

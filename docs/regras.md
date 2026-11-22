@@ -90,6 +90,9 @@ Aula que não acontece (feriado, professor doente) não conta nas 24: ela é rep
 R43
 A 1ª aula da turma é no primeiro dia dela depois da criação, no horário da turma. As aulas seguintes caem nos dias e no horário da turma, uma depois da outra, pulando as não realizadas (R18). A aula conta como dada quando começa, se não foi marcada como não realizada, e só a aula que já começou recebe presença. (H30, H22)
 
+R48
+O professor pode marcar como não realizada qualquer aula da etapa que ainda não tem presença lançada, passada ou futura. A aula com presença aconteceu e não pode ser marcada. A marcação é definitiva. (H22)
+
 R08 *(alterada)*
 Ao fim da etapa, o aluno sobe 1 nível se tiver no máximo 6 faltas (25% das 24 aulas) e nota ≥ 7 na prova final. As faltas contam só a partir da entrada do aluno na turma; as aulas anteriores contam como presença. (2.3, 3.2, 4.3)
 

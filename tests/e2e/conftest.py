@@ -4,7 +4,7 @@ import os
 import sqlite3
 from collections.abc import Iterator, Sequence
 from contextlib import closing, contextmanager
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from functools import partial
 from pathlib import Path
 
@@ -30,6 +30,7 @@ from plataforma.main import criar_janela
 from plataforma.modules.identidade.application.casos_de_uso import (
     CadastrarAluno,
     CadastrarProfessor,
+    ConsultaDeAlunos,
     ConsultaDeProfessores,
     CriarPrimeiroAdm,
     Entrar,
@@ -60,6 +61,7 @@ from plataforma.modules.nivelamento.infra.repositorio_de_questoes import (
 )
 from plataforma.modules.turmas.application.casos_de_uso import CriarTurma
 from plataforma.modules.turmas.application.matricula import Matricular
+from plataforma.modules.turmas.application.presenca import LancarPresenca
 from plataforma.modules.turmas.domain.horario import DiaDaSemana
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
 
@@ -272,6 +274,23 @@ class App:
                 em_transacao,
             )
             matricular.executar(aluno, turma_id)
+
+    def preparar_presenca(
+        self, turma_id: int, data_da_aula: date, ausentes: Sequence[Usuario] = ()
+    ) -> None:
+        """Lança, antes de abrir o app, a presença de uma aula pelo ADM, que lança em qualquer
+        turma (R10). A aula precisa ter começado no relógio do app."""
+        with self._no_banco() as (conexao, em_transacao, adm):
+            usuarios = RepositorioDeUsuariosSqlite(conexao)
+            lancar = LancarPresenca(
+                RepositorioDeTurmasSqlite(conexao),
+                ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao)),
+                ConsultaDeProfessores(RepositorioDeProfessoresSqlite(conexao)),
+                ConsultaDeAlunos(usuarios),
+                self.relogio,
+                em_transacao,
+            )
+            lancar.executar(adm, turma_id, data_da_aula, {aluno.id for aluno in ausentes})
 
     def texto_do_log(self) -> str:
         return (self.pasta_de_dados / "logs" / "plataforma.log").read_text(encoding="utf-8")

@@ -16,6 +16,8 @@ class RepositorioDeUsuarios(Protocol):
 
     def adicionar(self, email: str, hash_da_senha: str, perfil: Perfil) -> Usuario: ...
 
+    def buscar(self, usuario_id: int) -> Usuario | None: ...
+
 
 class RepositorioDeProfessores(Protocol):
     def listar(self) -> list[Professor]:

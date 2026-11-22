@@ -2,12 +2,17 @@
 conflito de horário (R07) e troca de professor (R26)."""
 
 from collections.abc import Iterable
-from dataclasses import dataclass, replace
-from datetime import datetime
+from dataclasses import dataclass, field, replace
+from datetime import date, datetime
 
 from plataforma.compartilhado.recusa import Recusa
 from plataforma.modules.materias.domain.materia import nome_do_nivel
-from plataforma.modules.turmas.domain.etapa import primeira_aula_depois
+from plataforma.modules.turmas.domain.etapa import (
+    AulaDaEtapa,
+    aulas_dadas,
+    calendario,
+    primeira_aula_depois,
+)
 from plataforma.modules.turmas.domain.horario import (
     Horario,
     descrever_horario,
@@ -50,7 +55,8 @@ class TurmaNova:
 
 @dataclass(frozen=True)
 class Turma:
-    """inicio_da_etapa é o início da 1ª aula da etapa atual (R43)."""
+    """inicio_da_etapa é o início da 1ª aula da etapa atual (R43), e nao_realizadas, as datas
+    das aulas dela que não aconteceram (R18)."""
 
     id: int
     materia_id: int
@@ -58,6 +64,13 @@ class Turma:
     professor_id: int
     horario: Horario
     inicio_da_etapa: datetime
+    nao_realizadas: frozenset[date] = field(default_factory=frozenset)
+
+    def calendario(self) -> list[AulaDaEtapa]:
+        return calendario(self.horario, self.inicio_da_etapa, self.nao_realizadas)
+
+    def aulas_dadas(self, agora: datetime) -> int:
+        return aulas_dadas(self.horario, self.inicio_da_etapa, agora, self.nao_realizadas)
 
 
 def nova_turma(

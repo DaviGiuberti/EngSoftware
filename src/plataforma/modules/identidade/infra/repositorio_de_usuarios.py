@@ -31,3 +31,12 @@ class RepositorioDeUsuariosSqlite:
             (email, hash_da_senha, perfil.value),
         ).fetchone()
         return Usuario(id_usuario, email, perfil)
+
+    def buscar(self, usuario_id: int) -> Usuario | None:
+        linha = self._conexao.execute(
+            "SELECT id, email, perfil FROM usuario WHERE id = ?", (usuario_id,)
+        ).fetchone()
+        if linha is None:
+            return None
+        id_usuario, email, perfil = linha
+        return Usuario(id_usuario, email, Perfil(perfil))

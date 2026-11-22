@@ -1,10 +1,11 @@
-"""Turmas no SQLite: a tabela turma da migração 0007 e, da 0008, as matrículas, as
-mensalidades pagas e as listas de espera.
+"""Turmas no SQLite: a tabela turma da migração 0007; da 0008, as matrículas, as mensalidades
+pagas e as listas de espera; e da 0009, as aulas não realizadas e as presenças.
 
 Todo SQL usa parâmetros (RNF08). Datas e horas vão como texto ISO 8601, com o fuso.
 """
 
 import sqlite3
+from collections.abc import Sequence
 from datetime import date, datetime, time
 from typing import Any
 
@@ -12,6 +13,7 @@ from plataforma.modules.turmas.domain.horario import DiaDaSemana, Horario
 from plataforma.modules.turmas.domain.lista_de_espera import ListaDeEspera, NaLista
 from plataforma.modules.turmas.domain.matricula import Matricula
 from plataforma.modules.turmas.domain.mensalidade import Mensalidade
+from plataforma.modules.turmas.domain.presenca import Presenca
 from plataforma.modules.turmas.domain.turma import Turma, TurmaNova
 
 # Cada filtro NULL deixa passar todas as matrículas ativas.
@@ -161,6 +163,63 @@ class RepositorioDeTurmasSqlite:
         ).fetchall()
         return [turma_id for (turma_id,) in linhas]
 
+    def marcar_nao_realizada(
+        self, turma_id: int, nivel: int, data: date, marcada_em: datetime
+    ) -> None:
+        self._conexao.execute(
+            "INSERT INTO aula_nao_realizada (turma_id, nivel, data, marcada_em) "
+            "VALUES (?, ?, ?, ?)",
+            (turma_id, nivel, data.isoformat(), marcada_em.isoformat()),
+        )
+
+    def lancar_presenca(
+        self,
+        turma_id: int,
+        nivel: int,
+        data_da_aula: date,
+        presencas: Sequence[Presenca],
+        lancada_em: datetime,
+        lancada_por: int,
+    ) -> None:
+        self._conexao.execute(
+            "INSERT INTO lancamento_de_presenca "
+            "(turma_id, nivel, data_da_aula, lancada_em, lancada_por) VALUES (?, ?, ?, ?, ?)",
+            (turma_id, nivel, data_da_aula.isoformat(), lancada_em.isoformat(), lancada_por),
+        )
+        self._conexao.executemany(
+            "INSERT INTO presenca (turma_id, nivel, data_da_aula, aluno_id, presente) "
+            "VALUES (?, ?, ?, ?, ?)",
+            [
+                (turma_id, nivel, p.data_da_aula.isoformat(), p.aluno_id, p.presente)
+                for p in presencas
+            ],
+        )
+
+    def datas_com_presenca(self, turma_id: int, nivel: int) -> set[date]:
+        linhas = self._conexao.execute(
+            "SELECT data_da_aula FROM lancamento_de_presenca WHERE turma_id = ? AND nivel = ?",
+            (turma_id, nivel),
+        ).fetchall()
+        return {date.fromisoformat(data) for (data,) in linhas}
+
+    def presencas(self, turma_id: int, nivel: int) -> list[Presenca]:
+        linhas = self._conexao.execute(
+            "SELECT aluno_id, data_da_aula, presente FROM presenca "
+            "WHERE turma_id = ? AND nivel = ? ORDER BY data_da_aula, aluno_id",
+            (turma_id, nivel),
+        ).fetchall()
+        return [
+            Presenca(aluno_id, date.fromisoformat(data), bool(presente))
+            for aluno_id, data, presente in linhas
+        ]
+
+    def _nao_realizadas(self, turma_id: int, nivel: int) -> frozenset[date]:
+        linhas = self._conexao.execute(
+            "SELECT data FROM aula_nao_realizada WHERE turma_id = ? AND nivel = ?",
+            (turma_id, nivel),
+        ).fetchall()
+        return frozenset(date.fromisoformat(data) for (data,) in linhas)
+
     def _matriculas(
         self, turma_id: int | None = None, aluno_id: int | None = None
     ) -> list[Matricula]:
@@ -192,4 +251,5 @@ class RepositorioDeTurmasSqlite:
             professor_id,
             horario,
             datetime.fromisoformat(inicio_da_etapa),
+            self._nao_realizadas(turma_id, nivel),
         )

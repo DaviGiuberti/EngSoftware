@@ -32,6 +32,7 @@ from plataforma.modules.nivelamento.ui.telas import TelaExcecoes, TelaQuestoes
 from plataforma.modules.nivelamento.ui.telas_do_aluno import AreaDoAluno
 from plataforma.modules.turmas.application.casos_de_uso import CasosDeUsoDeTurmas
 from plataforma.modules.turmas.application.matricula import CasosDeUsoDaMatricula
+from plataforma.modules.turmas.application.presenca import CasosDeUsoDasAulas
 from plataforma.modules.turmas.ui.telas import TelaTurmas
 from plataforma.modules.turmas.ui.telas_do_aluno import TelaTurmasDoAluno
 from plataforma.modules.turmas.ui.telas_do_professor import TelaMinhasTurmas
@@ -46,6 +47,7 @@ class CasosDeUso:
     nivelamento: CasosDeUsoDoNivelamento
     turmas: CasosDeUsoDeTurmas
     matricula: CasosDeUsoDaMatricula
+    aulas: CasosDeUsoDasAulas
 
 
 class AbasDoAluno(QTabWidget):
@@ -212,7 +214,7 @@ class JanelaPrincipal(QMainWindow):
             return AreaDoAdm(usuario, self._casos_de_uso)
         if usuario.perfil == Perfil.ALUNO:
             return AbasDoAluno(usuario, self._casos_de_uso)
-        return TelaMinhasTurmas(usuario, self._casos_de_uso.turmas)
+        return TelaMinhasTurmas(usuario, self._casos_de_uso.turmas, self._casos_de_uso.aulas)
 
     def _encerrar_area(self) -> None:
         """Quem sai no meio do nivelamento tem o tempo parado antes de a conexão fechar."""
