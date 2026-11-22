@@ -17,6 +17,8 @@ from plataforma.banco import (
 from plataforma.compartilhado.relogio import Relogio
 from plataforma.janela_principal import CasosDeUso, JanelaPrincipal
 from plataforma.log import configurar_log, fechar_log
+from plataforma.modules.catalogo.application.casos_de_uso import montar_casos_de_uso
+from plataforma.modules.catalogo.infra.repositorio_de_pacotes import RepositorioDePacotesSqlite
 from plataforma.modules.identidade.application.casos_de_uso import (
     CadastrarAluno,
     CadastrarProfessor,
@@ -224,6 +226,12 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
             ver_prova_final=VerProvaFinal(*das_aulas),
             lancar_nota=LancarNota(*das_aulas),
             corrigir_nota=CorrigirNota(*das_aulas),
+        ),
+        catalogo=montar_casos_de_uso(
+            RepositorioDePacotesSqlite(conexao),
+            consulta_de_materias,
+            consulta_de_professores,
+            em_transacao,
         ),
     )
 

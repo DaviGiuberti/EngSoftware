@@ -169,6 +169,18 @@ O pacote passa por rascunho → em revisão → publicado → arquivado. O profe
 R38
 Quando o ADM devolve um pacote em revisão, ele volta para rascunho, e o professor pode editá-lo e enviá-lo de novo. (H34)
 
+R56
+O professor só cria pacote de uma matéria em que está habilitado (R11), num dos níveis dela. A matéria e o nível do pacote não mudam depois de criado, e só o professor que criou o pacote o edita. (H25)
+
+R57
+O pacote só vai para revisão com pelo menos 1 aula. O professor edita o pacote em rascunho e o publicado (R15); em revisão, ele espera o ADM publicar ou devolver, e o arquivado não é editado. (H25, H26, H35)
+
+R58
+Cada aula gravada tem um título e o link de um vídeo do YouTube (youtube.com/watch?v=… ou youtu.be/…); outro link é recusado. No rascunho, o professor adiciona, corrige e remove aulas. No pacote publicado, ele adiciona e corrige aulas e muda o título, mas não remove nenhuma aula, porque quem comprou a perderia. (H26)
+
+R59
+O ADM define o preço do pacote, maior que zero, ao publicá-lo, e pode mudá-lo depois, no publicado ou no arquivado. A mudança vale para as compras seguintes. Publicado de novo, o pacote arquivado volta com o preço que tinha. (H34, H35)
+
 R12 *(alterada)*
 A compra de um pacote libera o acesso por 12 meses. Com acesso ativo, o aluno não pode comprar o mesmo pacote de novo. Se o pacote for arquivado, quem comprou mantém o acesso até o fim dos 12 meses. (13.3, 13.4)
 

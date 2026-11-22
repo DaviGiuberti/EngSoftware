@@ -4,7 +4,7 @@ de Física do N2, de terça e quinta, tem a 1ª aula na terça 24/11, às 19h.""
 
 from datetime import date, time
 
-from plataforma.janela_principal import AbasDoAluno, JanelaPrincipal
+from plataforma.janela_principal import AbasDoAluno, AbasDoProfessor, JanelaPrincipal
 from plataforma.modules.identidade.domain.usuario import Usuario
 from plataforma.modules.turmas.domain.horario import DiaDaSemana
 from plataforma.modules.turmas.ui.telas_do_aluno import TelaTurmasDoAluno
@@ -44,7 +44,9 @@ def preparar_turma_com_ana_e_bruno(app: App) -> tuple[int, Usuario, Usuario]:
 def entrar_como_carlos(app: App, janela: JanelaPrincipal) -> TelaMinhasTurmas:
     """Entra como o professor e escolhe a turma dele na tabela."""
     app.entrar(janela, "carlos@exemplo.com", SENHA_DOS_PROFESSORES)
-    tela = janela.tela_inicio.area
+    abas = janela.tela_inicio.area
+    assert isinstance(abas, AbasDoProfessor)
+    tela = abas.turmas
     assert isinstance(tela, TelaMinhasTurmas)
     tela.tabela.selectRow(0)
     return tela

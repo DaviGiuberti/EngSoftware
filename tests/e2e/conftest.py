@@ -27,6 +27,9 @@ from plataforma.compartilhado.horario import BRASILIA
 from plataforma.compartilhado.transacao import Transacao
 from plataforma.janela_principal import JanelaPrincipal
 from plataforma.main import criar_janela
+from plataforma.modules.catalogo.application.casos_de_uso import montar_casos_de_uso
+from plataforma.modules.catalogo.domain.pacote import EstadoPacote
+from plataforma.modules.catalogo.infra.repositorio_de_pacotes import RepositorioDePacotesSqlite
 from plataforma.modules.identidade.application.casos_de_uso import (
     CadastrarAluno,
     CadastrarProfessor,
@@ -287,6 +290,39 @@ class App:
                 self._em_dia(conexao),
             )
             matricular.executar(aluno, turma_id)
+
+    def preparar_pacote(
+        self,
+        titulo: str,
+        materia: str,
+        nivel: int,
+        email_do_professor: str,
+        aulas: int = 0,
+        estado: EstadoPacote = EstadoPacote.RASCUNHO,
+    ) -> None:
+        """Cria, antes de abrir o app, o pacote do professor com as aulas "Aula 1", "Aula 2"... e
+        o leva até o estado pedido. O publicado custa R$ 120 (R59), e o arquivado também."""
+        with self._no_banco() as (conexao, em_transacao, adm):
+            materias = ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao))
+            professores = ConsultaDeProfessores(RepositorioDeProfessoresSqlite(conexao))
+            casos = montar_casos_de_uso(
+                RepositorioDePacotesSqlite(conexao), materias, professores, em_transacao
+            )
+            materia_id = next(m.id for m in materias.listar() if m.nome == materia)
+            professor = next(p for p in professores.listar() if p.email == email_do_professor)
+            pacote = casos.criar_pacote.executar(professor.usuario, titulo, materia_id, nivel)
+            for numero in range(1, aulas + 1):
+                casos.adicionar_aula.executar(
+                    professor.usuario, pacote.id, f"Aula {numero}", f"youtu.be/aula{numero:07d}"
+                )
+            if estado == EstadoPacote.RASCUNHO:
+                return
+            casos.enviar_para_revisao.executar(professor.usuario, pacote.id)
+            if estado == EstadoPacote.EM_REVISAO:
+                return
+            casos.publicar.executar(adm, pacote.id, 12000)
+            if estado == EstadoPacote.ARQUIVADO:
+                casos.arquivar.executar(adm, pacote.id)
 
     def preparar_mensalidades(self, aluno: Usuario, turma_id: int, quantas: int = 12) -> None:
         """Grava, antes de abrir o app, as próximas mensalidades do aluno como pagas em dia, para

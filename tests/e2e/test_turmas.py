@@ -6,7 +6,7 @@ from datetime import time
 
 from PySide6.QtCore import QTime
 
-from plataforma.janela_principal import AreaDoAdm
+from plataforma.janela_principal import AbasDoProfessor, AreaDoAdm
 from plataforma.modules.turmas.domain.horario import DiaDaSemana
 from plataforma.modules.turmas.ui.telas import CamposDoHorario, TelaTurmas
 from plataforma.modules.turmas.ui.telas_do_professor import TelaMinhasTurmas
@@ -174,7 +174,9 @@ def test_r24_carlos_ve_so_as_suas_turmas_com_nivel_dias_e_horario(app: App) -> N
 
     app.entrar(janela, "carlos@exemplo.com", SENHA_DOS_PROFESSORES)
 
-    area = janela.tela_inicio.area
+    abas = janela.tela_inicio.area
+    assert isinstance(abas, AbasDoProfessor)
+    area = abas.turmas
     assert isinstance(area, TelaMinhasTurmas)
     assert linhas(area.tabela) == [
         ["Física", "N1", "terças e quintas, das 19h às 20h30", "1ª aula em 24/11/2026, às 19h"],
@@ -192,7 +194,9 @@ def test_r43_depois_da_1a_aula_a_etapa_mostra_as_aulas_dadas(app: App) -> None:
 
     app.entrar(janela, "carlos@exemplo.com", SENHA_DOS_PROFESSORES)
 
-    area = janela.tela_inicio.area
+    abas = janela.tela_inicio.area
+    assert isinstance(abas, AbasDoProfessor)
+    area = abas.turmas
     assert isinstance(area, TelaMinhasTurmas)
     assert linhas(area.tabela)[0][3] == "2 de 24 aulas dadas"
 
@@ -203,7 +207,9 @@ def test_o_professor_sem_turmas_ve_o_aviso(app: App) -> None:
 
     app.entrar(janela, "carlos@exemplo.com", SENHA_DOS_PROFESSORES)
 
-    area = janela.tela_inicio.area
+    abas = janela.tela_inicio.area
+    assert isinstance(abas, AbasDoProfessor)
+    area = abas.turmas
     assert isinstance(area, TelaMinhasTurmas)
     assert area.mensagem.text() == "Você ainda não tem turmas. O ADM atribui as turmas a você."
 
