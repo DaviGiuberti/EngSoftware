@@ -1,13 +1,16 @@
 """Calendário da etapa: 24 aulas (R17), a partir da 1ª, nos dias e no horário da turma (R43). A
 aula não realizada não conta nas 24 e é reposta no fim da etapa (R18). Só a aula ainda sem
-presença pode ser marcada como não realizada, passada ou futura (R48)."""
+presença pode ser marcada como não realizada, passada ou futura, e só enquanto a etapa não
+terminou (R48). A etapa termina no fim da 24ª aula, e a seguinte começa no próximo dia da turma
+(R04, R17)."""
 
 from collections.abc import Collection, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
 from plataforma.compartilhado.recusa import Recusa
-from plataforma.modules.turmas.domain.horario import Horario
+from plataforma.modules.materias.domain.materia import nome_do_nivel
+from plataforma.modules.turmas.domain.horario import Horario, formatar_data_e_hora
 
 AULAS_POR_ETAPA = 24
 
@@ -22,6 +25,14 @@ class JaNaoRealizada(Recusa):
 
 class AulaComPresenca(Recusa):
     """R48: a mensagem diz que a aula aconteceu."""
+
+
+class EtapaTerminada(Recusa):
+    """R48: a mensagem diz quando a etapa terminou."""
+
+
+class EtapaNaoEncontrada(Recusa):
+    """A mensagem diz de que nível é a etapa que a turma não teve."""
 
 
 @dataclass(frozen=True)
@@ -105,6 +116,65 @@ def aula_na_data(aulas: Sequence[AulaDaEtapa], data: date) -> AulaDaEtapa:
     if aula is None:
         raise SemAulaNaData(f"A etapa não tem aula em {data:%d/%m/%Y}.")
     return aula
+
+
+@dataclass(frozen=True)
+class Etapa:
+    """As 24 aulas da turma num nível (R17): o início da 1ª aula (R43) e as datas das aulas não
+    realizadas (R18)."""
+
+    horario: Horario
+    nivel: int
+    inicio: datetime
+    nao_realizadas: frozenset[date] = frozenset()
+
+    def calendario(self) -> list[AulaDaEtapa]:
+        return calendario(self.horario, self.inicio, self.nao_realizadas)
+
+    def aulas_dadas(self, agora: datetime) -> int:
+        return aulas_dadas(self.horario, self.inicio, agora, self.nao_realizadas)
+
+    @property
+    def fim(self) -> datetime:
+        """R17: a etapa termina no fim da 24ª aula, no horário de término da turma."""
+        ultima = self.calendario()[-1]
+        return datetime.combine(ultima.data, self.horario.fim, tzinfo=ultima.inicio.tzinfo)
+
+    def terminou(self, agora: datetime) -> bool:
+        return self.fim <= agora
+
+    def seguinte(self) -> "Etapa":
+        """R04 e R43: a etapa do nível seguinte começa no primeiro dia da turma depois do fim
+        desta, no mesmo horário. Ela ainda não tem aula não realizada."""
+        return Etapa(self.horario, self.nivel + 1, primeira_aula_depois(self.horario, self.fim))
+
+
+def etapa_do_nivel(etapas: Sequence[Etapa], nivel: int) -> Etapa:
+    """A etapa da turma num nível, a atual ou uma que já terminou."""
+    etapa = next((etapa for etapa in etapas if etapa.nivel == nivel), None)
+    if etapa is None:
+        raise EtapaNaoEncontrada(f"A turma não tem a etapa do {nome_do_nivel(nivel)}.")
+    return etapa
+
+
+def aula_nas_etapas(etapas: Sequence[Etapa], data: date) -> tuple[Etapa, AulaDaEtapa]:
+    """A aula de uma data e a etapa dela, a atual ou uma que já terminou. A presença da 24ª aula
+    pode ser lançada depois que a turma passou para o nível seguinte."""
+    for etapa in etapas:
+        aula = next((aula for aula in etapa.calendario() if aula.data == data), None)
+        if aula is not None:
+            return etapa, aula
+    raise SemAulaNaData(f"A turma não tem aula em {data:%d/%m/%Y}.")
+
+
+def exigir_etapa_em_andamento(etapa: Etapa, agora: datetime) -> None:
+    """R48: as aulas da etapa que terminou não são mais marcadas como não realizadas, porque
+    isso mudaria o fim dela e o começo da seguinte."""
+    if etapa.terminou(agora):
+        raise EtapaTerminada(
+            f"A etapa do {nome_do_nivel(etapa.nivel)} terminou em "
+            f"{formatar_data_e_hora(etapa.fim)}: as aulas dela não mudam mais."
+        )
 
 
 def marcar_nao_realizada(

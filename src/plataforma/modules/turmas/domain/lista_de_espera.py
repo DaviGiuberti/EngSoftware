@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from plataforma.compartilhado.recusa import Recusa
 from plataforma.modules.turmas.domain.horario import formatar_data_e_hora
 from plataforma.modules.turmas.domain.matricula import matricula_aberta
+from plataforma.modules.turmas.domain.turma import Turma
 
 PRAZO_PARA_CONFIRMAR = timedelta(hours=72)
 
@@ -76,6 +77,15 @@ def exigir_lista_aberta(aulas_dadas: int) -> None:
 def reservadas(lista: ListaDeEspera) -> int:
     """R05: cada oferta de vaga reserva uma vaga da turma até o prazo."""
     return sum(1 for na_lista in lista if na_lista.prazo is not None)
+
+
+def pode_oferecer_em(turma: Turma) -> Callable[[datetime], bool]:
+    """R45: a vaga que abre só é oferecida à lista de espera antes da 13ª aula da etapa."""
+
+    def pode_oferecer(momento: datetime) -> bool:
+        return matricula_aberta(turma.aulas_dadas(momento))
+
+    return pode_oferecer
 
 
 def oferecer_vaga(lista: ListaDeEspera, momento: datetime, pode_oferecer: bool) -> ListaDeEspera:
