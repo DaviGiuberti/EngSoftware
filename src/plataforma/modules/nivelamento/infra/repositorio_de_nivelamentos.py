@@ -140,11 +140,12 @@ class RepositorioDeNivelamentosSqlite:
             (aluno_id, materia_id, em.isoformat()),
         )
 
-    def trilhas_concluidas(self, aluno_id: int) -> set[int]:
+    def trilhas_concluidas(self, aluno_id: int) -> dict[int, datetime]:
         linhas = self._conexao.execute(
-            "SELECT materia_id FROM trilha_concluida WHERE aluno_id = ?", (aluno_id,)
+            "SELECT materia_id, concluida_em FROM trilha_concluida WHERE aluno_id = ?",
+            (aluno_id,),
         )
-        return {materia_id for (materia_id,) in linhas}
+        return {materia_id: datetime.fromisoformat(em) for materia_id, em in linhas}
 
     def _montar(self, linha: tuple[Any, ...] | None) -> Nivelamento | None:
         if linha is None:
