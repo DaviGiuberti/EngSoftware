@@ -67,12 +67,13 @@ class EstadoDoNivelamento:
 
 @dataclass(frozen=True)
 class NivelNaMateria:
-    """Uma linha do perfil do aluno (H03)."""
+    """Uma linha do perfil do aluno (H03), com a trilha concluída no nível máximo (R09)."""
 
     materia_id: int
     nome_da_materia: str
     nivel: int | None
     situacao: SituacaoNaMateria
+    trilha_concluida: bool = False
 
 
 class _CasoDoNivelamento:
@@ -264,6 +265,7 @@ class VerMeusNiveis:
         exigir_perfil(usuario, Perfil.ALUNO, "ver os próprios níveis")
         niveis = {n.materia_id: n for n in self._nivelamentos.niveis_do_aluno(usuario.id)}
         em_andamento = self._nivelamentos.materias_em_andamento(usuario.id)
+        trilhas_concluidas = self._nivelamentos.trilhas_concluidas(usuario.id)
         questoes_por_materia = self._questoes.contar_por_materia()
         linhas = []
         for materia in self._materias.listar():
@@ -275,7 +277,13 @@ class VerMeusNiveis:
                 quantidade_de_questoes=questoes_por_materia.get(materia.id, 0),
             )
             linhas.append(
-                NivelNaMateria(materia.id, materia.nome, nivel.nivel if nivel else None, situacao)
+                NivelNaMateria(
+                    materia.id,
+                    materia.nome,
+                    nivel.nivel if nivel else None,
+                    situacao,
+                    trilha_concluida=materia.id in trilhas_concluidas,
+                )
             )
         return linhas
 

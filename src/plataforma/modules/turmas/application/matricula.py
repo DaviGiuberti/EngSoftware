@@ -1,6 +1,7 @@
-"""Casos de uso do aluno nas turmas (H04, H05, H06, H07, H13): ver as turmas do nível dele,
+"""Casos de uso do aluno nas turmas (H04, H05, H06, H07, H13, H08): ver as turmas do nível dele,
 matricular-se pagando a primeira mensalidade, entrar na lista de espera, confirmar a vaga
-oferecida e sair da turma."""
+oferecida e sair da turma. Nas turmas em que está, o aluno vê as faltas da etapa e a prova final
+da última etapa que terminou."""
 
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -17,8 +18,12 @@ from plataforma.modules.turmas.application.casos_de_uso import (
     ResumoDaTurma,
     obter_turma,
     ocupacao,
-    pode_oferecer_em,
     resumir,
+)
+from plataforma.modules.turmas.application.em_dia import (
+    SituacaoNaProvaFinal,
+    TurmasEmDia,
+    situacoes_na_prova_final,
 )
 from plataforma.modules.turmas.application.portas import RepositorioDeTurmas
 from plataforma.modules.turmas.domain.lista_de_espera import (
@@ -27,6 +32,7 @@ from plataforma.modules.turmas.domain.lista_de_espera import (
     exigir_lista_aberta,
     exigir_turma_cheia,
     oferecer_vaga,
+    pode_oferecer_em,
     posicao,
     reservadas,
     sair,
@@ -47,14 +53,15 @@ from plataforma.modules.turmas.domain.mensalidade import (
     primeira_mensalidade,
     proximo_vencimento,
 )
-from plataforma.modules.turmas.domain.presenca import faltas
-from plataforma.modules.turmas.domain.turma import Turma
+from plataforma.modules.turmas.domain.presenca import faltas_na_etapa
+from plataforma.modules.turmas.domain.turma import Turma, exigir_aberta, horarios_ocupados
 
 
 @dataclass(frozen=True)
 class TurmaDoAluno:
     """Uma turma como o aluno a vê: a turma, a situação dele nela e o valor da mensalidade. Na
-    turma em que ele está, também as faltas dele na etapa (R08)."""
+    turma em que ele está, também as faltas dele na etapa (R08) e a prova final da última etapa
+    que ele terminou nela, com a nota e o resultado (R49)."""
 
     resumo: ResumoDaTurma
     situacao: SituacaoNaTurma
@@ -63,6 +70,7 @@ class TurmaDoAluno:
     prazo_para_confirmar: datetime | None = None
     proximo_vencimento: date | None = None
     faltas: int | None = None
+    prova_final: SituacaoNaProvaFinal | None = None
 
 
 @dataclass(frozen=True)
@@ -87,6 +95,7 @@ class _CasoDoAluno:
         niveis: ConsultaDeNiveis,
         relogio: Relogio,
         transacao: Transacao,
+        em_dia: TurmasEmDia,
     ) -> None:
         self._turmas = turmas
         self._materias = materias
@@ -94,6 +103,7 @@ class _CasoDoAluno:
         self._niveis = niveis
         self._relogio = relogio
         self._transacao = transacao
+        self._em_dia = em_dia
 
     def _turma_e_materia(self, turma_id: int) -> tuple[Turma, Materia]:
         turma = obter_turma(self._turmas, turma_id)
@@ -116,9 +126,10 @@ class _CasoDoAluno:
     def _exigir_que_pode_entrar(
         self, aluno: Usuario, turma: Turma, materia: Materia, agora: datetime
     ) -> None:
-        """R06, R44, R07 e R19: valem na matrícula e na confirmação da vaga (R47)."""
+        """R09, R06, R44, R07 e R19: valem na matrícula e na confirmação da vaga (R47)."""
+        exigir_aberta(turma)
         minhas = self._exigir_nivel_e_nenhuma_turma_na_materia(aluno, turma, materia)
-        exigir_aluno_livre(turma.horario, [minha.horario for minha in minhas])
+        exigir_aluno_livre(turma.horario, horarios_ocupados(minhas))
         exigir_matricula_aberta(turma.aulas_dadas(agora))
 
     def _matricular(
@@ -153,11 +164,17 @@ class _CasoDoAluno:
 
 
 class VerTurmasDoAluno(_CasoDoAluno):
-    """H04: o aluno vê as turmas do nível dele em cada matéria e as turmas em que está."""
+    """H04: o aluno vê as turmas do nível dele em cada matéria e as turmas em que está. A turma
+    encerrada só aparece para quem ainda está nela (R09)."""
 
     def executar(self, aluno: Usuario) -> list[TurmaDoAluno]:
         exigir_perfil(aluno, Perfil.ALUNO, "ver as turmas do seu nível")
         agora = self._relogio.agora()
+        with self._transacao():
+            self._em_dia.aplicar(agora)
+            return self._ver(aluno, agora)
+
+    def _ver(self, aluno: Usuario, agora: datetime) -> list[TurmaDoAluno]:
         niveis = self._niveis.niveis_do_aluno(aluno.id)
         minhas = {m.turma_id: m for m in self._turmas.matriculas_do_aluno(aluno.id)}
         materias = {materia.id: materia for materia in self._materias.listar()}
@@ -165,7 +182,8 @@ class VerTurmasDoAluno(_CasoDoAluno):
         vistas = []
         for turma in self._turmas.listar():
             matricula = minhas.get(turma.id)
-            if matricula is None and niveis.get(turma.materia_id) != turma.nivel:
+            do_nivel = not turma.encerrada and niveis.get(turma.materia_id) == turma.nivel
+            if matricula is None and not do_nivel:
                 continue
             ocupada = ocupacao(self._turmas, turma, agora)
             na_lista = next((n for n in ocupada.lista if n.aluno_id == aluno.id), None)
@@ -186,6 +204,7 @@ class VerTurmasDoAluno(_CasoDoAluno):
                     prazo_para_confirmar=na_lista.prazo if na_lista else None,
                     proximo_vencimento=self._proximo_vencimento(matricula),
                     faltas=self._faltas(turma, matricula),
+                    prova_final=self._prova_final(turma, aluno, agora) if matricula else None,
                 )
             )
         return sorted(vistas, key=lambda vista: (vista.resumo.nome_da_materia, vista.resumo.id))
@@ -201,13 +220,23 @@ class VerTurmasDoAluno(_CasoDoAluno):
         """R08: as faltas do aluno na etapa, a partir da aula em que ele entrou na turma."""
         if matricula is None:
             return None
-        presencas = [
-            presenca
-            for presenca in self._turmas.presencas(turma.id, turma.nivel)
-            if presenca.aluno_id == matricula.aluno_id
-        ]
-        entrada = aula_de_entrada(turma.aulas_dadas(matricula.matriculada_em))
-        return faltas(presencas, turma.calendario(), entrada)
+        presencas = self._turmas.presencas(turma.id, turma.nivel)
+        return faltas_na_etapa(
+            turma.etapa, matricula.aluno_id, matricula.matriculada_em, presencas
+        )
+
+    def _prova_final(
+        self, turma: Turma, aluno: Usuario, agora: datetime
+    ) -> SituacaoNaProvaFinal | None:
+        """R08, R23 e R49: a prova final da última etapa que terminou com o aluno na turma."""
+        for etapa in reversed(self._turmas.etapas(turma.id)):
+            if not etapa.terminou(agora):
+                continue
+            situacoes = situacoes_na_prova_final(self._turmas, turma.id, etapa)
+            situacao = next((s for s in situacoes if s.aluno_id == aluno.id), None)
+            if situacao is not None:
+                return situacao
+        return None
 
 
 class Matricular(_CasoDoAluno):
@@ -217,6 +246,7 @@ class Matricular(_CasoDoAluno):
         exigir_perfil(aluno, Perfil.ALUNO, "se matricular numa turma")
         agora = self._relogio.agora()
         with self._transacao():
+            self._em_dia.aplicar(agora)
             turma, materia = self._turma_e_materia(turma_id)
             self._exigir_que_pode_entrar(aluno, turma, materia, agora)
             ocupada = ocupacao(self._turmas, turma, agora)
@@ -233,7 +263,9 @@ class EntrarNaListaDeEspera(_CasoDoAluno):
         exigir_perfil(aluno, Perfil.ALUNO, "entrar na lista de espera")
         agora = self._relogio.agora()
         with self._transacao():
+            self._em_dia.aplicar(agora)
             turma, materia = self._turma_e_materia(turma_id)
+            exigir_aberta(turma)
             self._exigir_nivel_e_nenhuma_turma_na_materia(aluno, turma, materia)
             exigir_lista_aberta(turma.aulas_dadas(agora))
             ocupada = ocupacao(self._turmas, turma, agora)
@@ -250,6 +282,7 @@ class ConfirmarVaga(_CasoDoAluno):
         exigir_perfil(aluno, Perfil.ALUNO, "confirmar a vaga")
         agora = self._relogio.agora()
         with self._transacao():
+            self._em_dia.aplicar(agora)
             turma, materia = self._turma_e_materia(turma_id)
             lista = confirmar(
                 self._turmas.lista_de_espera(turma.id), aluno.id, agora, pode_oferecer_em(turma)
@@ -267,6 +300,7 @@ class SairDaTurma(_CasoDoAluno):
         exigir_perfil(aluno, Perfil.ALUNO, "sair da turma")
         agora = self._relogio.agora()
         with self._transacao():
+            self._em_dia.aplicar(agora)
             turma = obter_turma(self._turmas, turma_id)
             matricula = next(
                 (m for m in self._turmas.matriculas_da_turma(turma.id) if m.aluno_id == aluno.id),

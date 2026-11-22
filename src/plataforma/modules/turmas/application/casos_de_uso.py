@@ -1,11 +1,13 @@
-"""Casos de uso das turmas: criar a turma, trocar o professor e o pedido de mudar o horário, que
-é recusado (H30, H31), e ver as turmas, o ADM todas e o professor as dele (H20).
+"""Casos de uso das turmas: criar a turma, trocar o professor e os pedidos de mudar o horário e de
+encerrar a turma, que são recusados (H30, H31, H10), e ver as turmas, o ADM todas e o professor
+as dele (H20).
 
-Os casos de uso do aluno, como a matrícula, ficam em matricula.py e usam as funções públicas
-daqui: obter_turma, ocupacao e pode_oferecer_em.
+Todo caso de uso das turmas põe as turmas em dia antes de agir (em_dia.py). Os casos de uso do
+aluno, como a matrícula, ficam em matricula.py e usam as funções públicas daqui: obter_turma,
+ocupacao e resumir.
 """
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, time
 
@@ -16,23 +18,23 @@ from plataforma.modules.identidade.domain.autorizacao import exigir_perfil
 from plataforma.modules.identidade.domain.professor import exigir_habilitacao
 from plataforma.modules.identidade.domain.usuario import Perfil, Usuario
 from plataforma.modules.materias.application.casos_de_uso import ConsultaDeMaterias
+from plataforma.modules.turmas.application.em_dia import AtualizarTurmas, TurmasEmDia
 from plataforma.modules.turmas.application.portas import RepositorioDeTurmas
 from plataforma.modules.turmas.domain.horario import DiaDaSemana, Horario, novo_horario
 from plataforma.modules.turmas.domain.lista_de_espera import (
     ListaDeEspera,
+    pode_oferecer_em,
     reservadas,
     vencer_prazos,
 )
-from plataforma.modules.turmas.domain.matricula import (
-    Matricula,
-    matricula_aberta,
-    vagas_livres,
-)
+from plataforma.modules.turmas.domain.matricula import Matricula, vagas_livres
 from plataforma.modules.turmas.domain.turma import (
     Turma,
     TurmaNaoEncontrada,
+    encerrar,
     exigir_nivel_da_materia,
     exigir_professor_livre,
+    horarios_ocupados,
     mudar_horario,
     nova_turma,
     trocar_professor,
@@ -42,7 +44,7 @@ from plataforma.modules.turmas.domain.turma import (
 @dataclass(frozen=True)
 class ResumoDaTurma:
     """Uma turma como as telas mostram: com o nome da matéria, o e-mail do professor e as aulas
-    dadas da etapa até agora (R43)."""
+    dadas da etapa até agora (R43). encerrada_em é quando a turma encerrou (R09)."""
 
     id: int
     materia_id: int
@@ -54,6 +56,7 @@ class ResumoDaTurma:
     inicio_da_etapa: datetime
     aulas_dadas: int
     vagas_livres: int
+    encerrada_em: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -74,15 +77,6 @@ def obter_turma(turmas: RepositorioDeTurmas, turma_id: int) -> Turma:
     if turma is None:
         raise TurmaNaoEncontrada()
     return turma
-
-
-def pode_oferecer_em(turma: Turma) -> Callable[[datetime], bool]:
-    """R45: a vaga que abre só é oferecida à lista de espera antes da 13ª aula da etapa."""
-
-    def pode_oferecer(momento: datetime) -> bool:
-        return matricula_aberta(turma.aulas_dadas(momento))
-
-    return pode_oferecer
 
 
 def ocupacao(turmas: RepositorioDeTurmas, turma: Turma, agora: datetime) -> Ocupacao:
@@ -109,6 +103,7 @@ def resumir(
         inicio_da_etapa=turma.inicio_da_etapa,
         aulas_dadas=turma.aulas_dadas(agora),
         vagas_livres=ocupada.vagas_livres,
+        encerrada_em=turma.encerrada_em,
     )
 
 
@@ -122,12 +117,14 @@ class CriarTurma:
         professores: ConsultaDeProfessores,
         relogio: Relogio,
         transacao: Transacao,
+        em_dia: TurmasEmDia,
     ) -> None:
         self._turmas = turmas
         self._materias = materias
         self._professores = professores
         self._relogio = relogio
         self._transacao = transacao
+        self._em_dia = em_dia
 
     def executar(
         self,
@@ -147,7 +144,8 @@ class CriarTurma:
         exigir_habilitacao(professor, materia.id, materia.nome)
         agora = self._relogio.agora()
         with self._transacao():
-            ocupados = [turma.horario for turma in self._turmas.do_professor(professor.id)]
+            self._em_dia.aplicar(agora)
+            ocupados = horarios_ocupados(self._turmas.do_professor(professor.id))
             exigir_professor_livre(professor.email, horario, ocupados)
             turma = nova_turma(materia.id, nivel, professor.id, horario, agora)
             return self._turmas.adicionar(turma)
@@ -162,27 +160,29 @@ class TrocarProfessor:
         turmas: RepositorioDeTurmas,
         materias: ConsultaDeMaterias,
         professores: ConsultaDeProfessores,
+        relogio: Relogio,
         transacao: Transacao,
+        em_dia: TurmasEmDia,
     ) -> None:
         self._turmas = turmas
         self._materias = materias
         self._professores = professores
+        self._relogio = relogio
         self._transacao = transacao
+        self._em_dia = em_dia
 
     def executar(self, usuario: Usuario, turma_id: int, professor_id: int) -> Turma:
         exigir_perfil(usuario, Perfil.ADM, "trocar o professor da turma")
+        agora = self._relogio.agora()
         with self._transacao():
+            self._em_dia.aplicar(agora)
             turma = obter_turma(self._turmas, turma_id)
             professor = self._professores.obter(professor_id)
             trocada = trocar_professor(turma, professor.id, professor.email)
             materia = self._materias.obter(turma.materia_id)
             exigir_habilitacao(professor, materia.id, materia.nome)
-            ocupados = [
-                outra.horario
-                for outra in self._turmas.do_professor(professor.id)
-                if outra.id != turma.id
-            ]
-            exigir_professor_livre(professor.email, turma.horario, ocupados)
+            outras = [o for o in self._turmas.do_professor(professor.id) if o.id != turma.id]
+            exigir_professor_livre(professor.email, turma.horario, horarios_ocupados(outras))
             self._turmas.salvar(trocada)
             return trocada
 
@@ -207,6 +207,33 @@ class MudarHorario:
         return mudar_horario(obter_turma(self._turmas, turma_id), horario)
 
 
+class EncerrarTurma:
+    """O ADM pede para encerrar a turma, e o sistema recusa: ela encerra sozinha no fim da etapa
+    do nível máximo, mesmo sem alunos (R09, R25)."""
+
+    def __init__(
+        self,
+        turmas: RepositorioDeTurmas,
+        materias: ConsultaDeMaterias,
+        relogio: Relogio,
+        transacao: Transacao,
+        em_dia: TurmasEmDia,
+    ) -> None:
+        self._turmas = turmas
+        self._materias = materias
+        self._relogio = relogio
+        self._transacao = transacao
+        self._em_dia = em_dia
+
+    def executar(self, usuario: Usuario, turma_id: int) -> None:
+        exigir_perfil(usuario, Perfil.ADM, "encerrar turma")
+        agora = self._relogio.agora()
+        with self._transacao():
+            self._em_dia.aplicar(agora)
+            turma = obter_turma(self._turmas, turma_id)
+            encerrar(turma, self._materias.obter(turma.materia_id).nivel_maximo)
+
+
 class _LeituraDasTurmas:
     """Dependências e o resumo comuns às listas de turmas."""
 
@@ -216,14 +243,17 @@ class _LeituraDasTurmas:
         materias: ConsultaDeMaterias,
         professores: ConsultaDeProfessores,
         relogio: Relogio,
+        transacao: Transacao,
+        em_dia: TurmasEmDia,
     ) -> None:
         self._turmas = turmas
         self._materias = materias
         self._professores = professores
         self._relogio = relogio
+        self._transacao = transacao
+        self._em_dia = em_dia
 
-    def _resumir(self, turmas: Sequence[Turma]) -> list[ResumoDaTurma]:
-        agora = self._relogio.agora()
+    def _resumir(self, turmas: Sequence[Turma], agora: datetime) -> list[ResumoDaTurma]:
         nomes = {materia.id: materia.nome for materia in self._materias.listar()}
         emails = {professor.id: professor.email for professor in self._professores.listar()}
         return [
@@ -243,15 +273,22 @@ class VerTurmas(_LeituraDasTurmas):
 
     def executar(self, usuario: Usuario) -> list[ResumoDaTurma]:
         exigir_perfil(usuario, Perfil.ADM, "ver todas as turmas")
-        return self._resumir(self._turmas.listar())
+        agora = self._relogio.agora()
+        with self._transacao():
+            self._em_dia.aplicar(agora)
+            return self._resumir(self._turmas.listar(), agora)
 
 
 class VerMinhasTurmas(_LeituraDasTurmas):
-    """O professor vê só as turmas que o ADM atribuiu a ele, com nível, dias e horário (H20)."""
+    """O professor vê só as turmas que o ADM atribuiu a ele, com nível, dias e horário (H20). A
+    turma continua com ele quando passa de nível (R26)."""
 
     def executar(self, usuario: Usuario) -> list[ResumoDaTurma]:
         exigir_perfil(usuario, Perfil.PROFESSOR, "ver as próprias turmas")
-        return self._resumir(self._turmas.do_professor(usuario.id))
+        agora = self._relogio.agora()
+        with self._transacao():
+            self._em_dia.aplicar(agora)
+            return self._resumir(self._turmas.do_professor(usuario.id), agora)
 
 
 @dataclass(frozen=True)
@@ -261,5 +298,7 @@ class CasosDeUsoDeTurmas:
     criar_turma: CriarTurma
     trocar_professor: TrocarProfessor
     mudar_horario: MudarHorario
+    encerrar_turma: EncerrarTurma
     ver_turmas: VerTurmas
     ver_minhas_turmas: VerMinhasTurmas
+    atualizar: AtualizarTurmas

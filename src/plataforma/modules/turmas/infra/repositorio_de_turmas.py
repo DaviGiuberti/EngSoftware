@@ -1,5 +1,6 @@
 """Turmas no SQLite: a tabela turma da migração 0007; da 0008, as matrículas, as mensalidades
-pagas e as listas de espera; e da 0009, as aulas não realizadas e as presenças.
+pagas e as listas de espera; da 0009, as aulas não realizadas e as presenças; e da 0010, as
+etapas, o encerramento, as provas finais e as correções.
 
 Todo SQL usa parâmetros (RNF08). Datas e horas vão como texto ISO 8601, com o fuso.
 """
@@ -9,34 +10,49 @@ from collections.abc import Sequence
 from datetime import date, datetime, time
 from typing import Any
 
+from plataforma.modules.turmas.domain.etapa import Etapa
 from plataforma.modules.turmas.domain.horario import DiaDaSemana, Horario
 from plataforma.modules.turmas.domain.lista_de_espera import ListaDeEspera, NaLista
 from plataforma.modules.turmas.domain.matricula import Matricula
 from plataforma.modules.turmas.domain.mensalidade import Mensalidade
 from plataforma.modules.turmas.domain.presenca import Presenca
-from plataforma.modules.turmas.domain.turma import Turma, TurmaNova
+from plataforma.modules.turmas.domain.prova_final import Nota, ProvaFinal, ResultadoEtapa
+from plataforma.modules.turmas.domain.turma import (
+    Encerramento,
+    MudancaDaTurma,
+    PassagemDeEtapa,
+    Turma,
+    TurmaNova,
+)
 
-# Cada filtro NULL deixa passar todas as matrículas ativas.
-_MATRICULAS_ATIVAS = (
-    "SELECT id, turma_id, aluno_id, matriculada_em FROM matricula "
-    "WHERE saiu_em IS NULL "
+# Cada filtro NULL deixa passar todas as matrículas. Com so_ativas 0, vêm também as de quem saiu.
+_MATRICULAS = (
+    "SELECT id, turma_id, aluno_id, matriculada_em, saiu_em FROM matricula "
+    "WHERE (:so_ativas = 0 OR saiu_em IS NULL) "
     "AND (:turma_id IS NULL OR turma_id = :turma_id) "
     "AND (:aluno_id IS NULL OR aluno_id = :aluno_id) "
     "ORDER BY id"
 )
 
-# Cada filtro NULL deixa passar todas as turmas: sem filtro, a consulta traz todas.
+# A turma vem na etapa atual, a de maior nível. Cada filtro NULL deixa passar todas as turmas.
 _TURMAS = (
-    "SELECT id, materia_id, nivel, professor_id, primeiro_dia, segundo_dia, inicio, fim, "
-    "inicio_da_etapa FROM turma "
-    "WHERE (:turma_id IS NULL OR id = :turma_id) "
-    "AND (:professor_id IS NULL OR professor_id = :professor_id) "
-    "ORDER BY id"
+    "SELECT turma.id, turma.materia_id, etapa.nivel, turma.professor_id, turma.primeiro_dia, "
+    "turma.segundo_dia, turma.inicio, turma.fim, etapa.inicio, turma.encerrada_em "
+    "FROM turma JOIN etapa ON etapa.turma_id = turma.id "
+    "AND etapa.nivel = (SELECT MAX(atual.nivel) FROM etapa AS atual "
+    "WHERE atual.turma_id = turma.id) "
+    "WHERE (:turma_id IS NULL OR turma.id = :turma_id) "
+    "AND (:professor_id IS NULL OR turma.professor_id = :professor_id) "
+    "ORDER BY turma.id"
 )
 
 
 def _hora(hora: time) -> str:
     return hora.isoformat(timespec="minutes")
+
+
+def _data_e_hora(texto: str | None) -> datetime | None:
+    return None if texto is None else datetime.fromisoformat(texto)
 
 
 class RepositorioDeTurmasSqlite:
@@ -60,6 +76,7 @@ class RepositorioDeTurmasSqlite:
                 turma.inicio_da_etapa.isoformat(),
             ),
         ).fetchone()
+        self._adicionar_etapa(turma_id, turma.nivel, turma.inicio_da_etapa)
         return Turma(
             turma_id,
             turma.materia_id,
@@ -83,6 +100,32 @@ class RepositorioDeTurmasSqlite:
             "UPDATE turma SET professor_id = ? WHERE id = ?", (turma.professor_id, turma.id)
         )
 
+    def aplicar_mudanca(self, turma_id: int, mudanca: MudancaDaTurma) -> None:
+        match mudanca:
+            case PassagemDeEtapa(etapa=etapa):
+                self._adicionar_etapa(turma_id, etapa.nivel, etapa.inicio)
+            case Encerramento(em=em):
+                self._conexao.execute(
+                    "UPDATE turma SET encerrada_em = ? WHERE id = ?", (em.isoformat(), turma_id)
+                )
+
+    def etapas(self, turma_id: int) -> list[Etapa]:
+        turma = self.buscar(turma_id)
+        if turma is None:
+            return []
+        linhas = self._conexao.execute(
+            "SELECT nivel, inicio FROM etapa WHERE turma_id = ? ORDER BY nivel", (turma_id,)
+        ).fetchall()
+        return [
+            Etapa(
+                turma.horario,
+                nivel,
+                datetime.fromisoformat(inicio),
+                self._nao_realizadas(turma_id, nivel),
+            )
+            for nivel, inicio in linhas
+        ]
+
     def adicionar_matricula(
         self, turma_id: int, aluno_id: int, matriculada_em: datetime, primeira: Mensalidade
     ) -> Matricula:
@@ -105,6 +148,9 @@ class RepositorioDeTurmasSqlite:
 
     def matriculas_da_turma(self, turma_id: int) -> list[Matricula]:
         return self._matriculas(turma_id=turma_id)
+
+    def todas_as_matriculas(self, turma_id: int) -> list[Matricula]:
+        return self._matriculas(turma_id=turma_id, so_ativas=False)
 
     def matriculas_do_aluno(self, aluno_id: int) -> list[Matricula]:
         return self._matriculas(aluno_id=aluno_id)
@@ -132,11 +178,7 @@ class RepositorioDeTurmasSqlite:
             (turma_id,),
         ).fetchall()
         return tuple(
-            NaLista(
-                aluno_id,
-                datetime.fromisoformat(entrou_em),
-                None if prazo is None else datetime.fromisoformat(prazo),
-            )
+            NaLista(aluno_id, datetime.fromisoformat(entrou_em), _data_e_hora(prazo))
             for aluno_id, entrou_em, prazo in linhas
         )
 
@@ -195,12 +237,42 @@ class RepositorioDeTurmasSqlite:
             ],
         )
 
+    def corrigir_presenca(
+        self,
+        turma_id: int,
+        nivel: int,
+        data_da_aula: date,
+        presencas: Sequence[Presenca],
+        corrigida_em: datetime,
+        corrigida_por: int,
+    ) -> None:
+        self._conexao.executemany(
+            "UPDATE presenca SET presente = ? "
+            "WHERE turma_id = ? AND nivel = ? AND data_da_aula = ? AND aluno_id = ?",
+            [
+                (p.presente, turma_id, nivel, p.data_da_aula.isoformat(), p.aluno_id)
+                for p in presencas
+            ],
+        )
+        self._conexao.execute(
+            "UPDATE lancamento_de_presenca SET corrigida_em = ?, corrigida_por = ? "
+            "WHERE turma_id = ? AND nivel = ? AND data_da_aula = ?",
+            (corrigida_em.isoformat(), corrigida_por, turma_id, nivel, data_da_aula.isoformat()),
+        )
+
     def datas_com_presenca(self, turma_id: int, nivel: int) -> set[date]:
+        return set(self.lancamentos_de_presenca(turma_id, nivel))
+
+    def lancamentos_de_presenca(self, turma_id: int, nivel: int) -> dict[date, datetime]:
         linhas = self._conexao.execute(
-            "SELECT data_da_aula FROM lancamento_de_presenca WHERE turma_id = ? AND nivel = ?",
+            "SELECT data_da_aula, lancada_em FROM lancamento_de_presenca "
+            "WHERE turma_id = ? AND nivel = ?",
             (turma_id, nivel),
         ).fetchall()
-        return {date.fromisoformat(data) for (data,) in linhas}
+        return {
+            date.fromisoformat(data): datetime.fromisoformat(lancada_em)
+            for data, lancada_em in linhas
+        }
 
     def presencas(self, turma_id: int, nivel: int) -> list[Presenca]:
         linhas = self._conexao.execute(
@@ -213,6 +285,69 @@ class RepositorioDeTurmasSqlite:
             for aluno_id, data, presente in linhas
         ]
 
+    def provas_finais(self, turma_id: int, nivel: int) -> list[ProvaFinal]:
+        linhas = self._conexao.execute(
+            "SELECT aluno_id, nota_em_decimos, lancada_em, resultado_aplicado FROM prova_final "
+            "WHERE turma_id = ? AND nivel = ? ORDER BY aluno_id",
+            (turma_id, nivel),
+        ).fetchall()
+        return [
+            ProvaFinal(
+                aluno_id,
+                Nota(decimos),
+                datetime.fromisoformat(lancada_em),
+                None if aplicado is None else ResultadoEtapa(aplicado),
+            )
+            for aluno_id, decimos, lancada_em, aplicado in linhas
+        ]
+
+    def lancar_prova_final(
+        self, turma_id: int, nivel: int, prova: ProvaFinal, lancada_por: int
+    ) -> None:
+        self._conexao.execute(
+            "INSERT INTO prova_final "
+            "(turma_id, nivel, aluno_id, nota_em_decimos, lancada_em, lancada_por) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                turma_id,
+                nivel,
+                prova.aluno_id,
+                prova.nota.decimos,
+                prova.lancada_em.isoformat(),
+                lancada_por,
+            ),
+        )
+
+    def corrigir_prova_final(
+        self,
+        turma_id: int,
+        nivel: int,
+        aluno_id: int,
+        nota: Nota,
+        corrigida_em: datetime,
+        corrigida_por: int,
+    ) -> None:
+        self._conexao.execute(
+            "UPDATE prova_final SET nota_em_decimos = ?, corrigida_em = ?, corrigida_por = ? "
+            "WHERE turma_id = ? AND nivel = ? AND aluno_id = ?",
+            (nota.decimos, corrigida_em.isoformat(), corrigida_por, turma_id, nivel, aluno_id),
+        )
+
+    def aplicar_resultado(
+        self, turma_id: int, nivel: int, aluno_id: int, resultado: ResultadoEtapa
+    ) -> None:
+        self._conexao.execute(
+            "UPDATE prova_final SET resultado_aplicado = ? "
+            "WHERE turma_id = ? AND nivel = ? AND aluno_id = ?",
+            (resultado.value, turma_id, nivel, aluno_id),
+        )
+
+    def _adicionar_etapa(self, turma_id: int, nivel: int, inicio: datetime) -> None:
+        self._conexao.execute(
+            "INSERT INTO etapa (turma_id, nivel, inicio) VALUES (?, ?, ?)",
+            (turma_id, nivel, inicio.isoformat()),
+        )
+
     def _nao_realizadas(self, turma_id: int, nivel: int) -> frozenset[date]:
         linhas = self._conexao.execute(
             "SELECT data FROM aula_nao_realizada WHERE turma_id = ? AND nivel = ?",
@@ -221,14 +356,20 @@ class RepositorioDeTurmasSqlite:
         return frozenset(date.fromisoformat(data) for (data,) in linhas)
 
     def _matriculas(
-        self, turma_id: int | None = None, aluno_id: int | None = None
+        self, turma_id: int | None = None, aluno_id: int | None = None, so_ativas: bool = True
     ) -> list[Matricula]:
         linhas = self._conexao.execute(
-            _MATRICULAS_ATIVAS, {"turma_id": turma_id, "aluno_id": aluno_id}
+            _MATRICULAS, {"turma_id": turma_id, "aluno_id": aluno_id, "so_ativas": so_ativas}
         ).fetchall()
         return [
-            Matricula(matricula_id, id_da_turma, id_do_aluno, datetime.fromisoformat(em))
-            for matricula_id, id_da_turma, id_do_aluno, em in linhas
+            Matricula(
+                matricula_id,
+                id_da_turma,
+                id_do_aluno,
+                datetime.fromisoformat(matriculada_em),
+                _data_e_hora(saiu_em),
+            )
+            for matricula_id, id_da_turma, id_do_aluno, matriculada_em, saiu_em in linhas
         ]
 
     def _ler(self, turma_id: int | None = None, professor_id: int | None = None) -> list[Turma]:
@@ -239,7 +380,7 @@ class RepositorioDeTurmasSqlite:
 
     def _montar(self, linha: tuple[Any, ...]) -> Turma:
         turma_id, materia_id, nivel, professor_id, primeiro_dia, segundo_dia = linha[:6]
-        inicio, fim, inicio_da_etapa = linha[6:]
+        inicio, fim, inicio_da_etapa, encerrada_em = linha[6:]
         dias = [DiaDaSemana(primeiro_dia)]
         if segundo_dia is not None:
             dias.append(DiaDaSemana(segundo_dia))
@@ -252,4 +393,5 @@ class RepositorioDeTurmasSqlite:
             horario,
             datetime.fromisoformat(inicio_da_etapa),
             self._nao_realizadas(turma_id, nivel),
+            _data_e_hora(encerrada_em),
         )
