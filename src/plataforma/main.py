@@ -62,6 +62,15 @@ from plataforma.modules.nivelamento.infra.repositorio_de_nivelamentos import (
 from plataforma.modules.nivelamento.infra.repositorio_de_questoes import (
     RepositorioDeQuestoesSqlite,
 )
+from plataforma.modules.turmas.application.casos_de_uso import (
+    CasosDeUsoDeTurmas,
+    CriarTurma,
+    MudarHorario,
+    TrocarProfessor,
+    VerMinhasTurmas,
+    VerTurmas,
+)
+from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
 from plataforma.relogio import RelogioDoSistema
 
 
@@ -93,6 +102,8 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
     questoes = RepositorioDeQuestoesSqlite(conexao)
     nivelamentos = RepositorioDeNivelamentosSqlite(conexao)
     do_aluno = (nivelamentos, questoes, consulta_de_materias, relogio, em_transacao)
+    turmas = RepositorioDeTurmasSqlite(conexao)
+    leitura_das_turmas = (turmas, consulta_de_materias, consulta_de_professores, relogio)
     casos_de_uso = CasosDeUso(
         identidade=CasosDeUsoDaIdentidade(
             cadastrar_aluno=CadastrarAluno(usuarios, em_transacao),
@@ -123,6 +134,17 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
             liberar_refazer=LiberarRefazer(
                 nivelamentos, consulta_de_materias, alunos, em_transacao
             ),
+        ),
+        turmas=CasosDeUsoDeTurmas(
+            criar_turma=CriarTurma(
+                turmas, consulta_de_materias, consulta_de_professores, relogio, em_transacao
+            ),
+            trocar_professor=TrocarProfessor(
+                turmas, consulta_de_materias, consulta_de_professores, em_transacao
+            ),
+            mudar_horario=MudarHorario(turmas),
+            ver_turmas=VerTurmas(*leitura_das_turmas),
+            ver_minhas_turmas=VerMinhasTurmas(*leitura_das_turmas),
         ),
     )
 

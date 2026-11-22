@@ -2,6 +2,7 @@
 
 from collections.abc import Sequence
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -51,6 +52,8 @@ def descrever_habilitacoes(professor: Professor, materias: Sequence[Materia]) ->
 
 
 class TelaProfessores(QWidget):
+    professores_mudaram = Signal()
+
     def __init__(
         self,
         usuario: Usuario,
@@ -153,6 +156,7 @@ class TelaProfessores(QWidget):
                 mostrar_sucesso(
                     self.mensagem, f"Conta de professor criada para {professor.email}."
                 )
+                self.professores_mudaram.emit()
             case Falhou(mensagem):
                 mostrar_recusa(self.mensagem, mensagem)
 
@@ -173,5 +177,6 @@ class TelaProfessores(QWidget):
                     self.mensagem,
                     f"{professor.email} pode dar aula de {nome_da_materia}, em todos os níveis.",
                 )
+                self.professores_mudaram.emit()
             case Falhou(mensagem):
                 mostrar_recusa(self.mensagem, mensagem)

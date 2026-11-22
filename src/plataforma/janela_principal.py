@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -30,8 +30,9 @@ from plataforma.modules.materias.ui.telas import TelaMaterias
 from plataforma.modules.nivelamento.application.casos_de_uso import CasosDeUsoDoNivelamento
 from plataforma.modules.nivelamento.ui.telas import TelaExcecoes, TelaQuestoes
 from plataforma.modules.nivelamento.ui.telas_do_aluno import AreaDoAluno
-
-AVISO_DO_PROFESSOR = "Em breve, aqui: as suas turmas."
+from plataforma.modules.turmas.application.casos_de_uso import CasosDeUsoDeTurmas
+from plataforma.modules.turmas.ui.telas import TelaTurmas
+from plataforma.modules.turmas.ui.telas_do_professor import TelaMinhasTurmas
 
 
 @dataclass(frozen=True)
@@ -41,11 +42,12 @@ class CasosDeUso:
     identidade: CasosDeUsoDaIdentidade
     materias: CasosDeUsoDeMaterias
     nivelamento: CasosDeUsoDoNivelamento
+    turmas: CasosDeUsoDeTurmas
 
 
 class AreaDoAdm(QTabWidget):
-    """Abas do ADM: as matérias, as questões do nivelamento, os professores e as exceções do
-    nivelamento."""
+    """Abas do ADM: as matérias, as questões do nivelamento, os professores, as turmas e as
+    exceções do nivelamento."""
 
     def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUso) -> None:
         super().__init__()
@@ -57,16 +59,25 @@ class AreaDoAdm(QTabWidget):
         self.tela_professores = TelaProfessores(
             usuario, casos_de_uso.identidade, consulta_de_materias
         )
+        self.tela_turmas = TelaTurmas(
+            usuario,
+            casos_de_uso.turmas,
+            consulta_de_materias,
+            casos_de_uso.identidade.consulta_de_professores,
+        )
         self.tela_excecoes = TelaExcecoes(
             usuario, consulta_de_materias, casos_de_uso.nivelamento
         )
         self.addTab(self.tela_materias, "Matérias")
         self.addTab(self.tela_questoes, "Questões do nivelamento")
         self.addTab(self.tela_professores, "Professores")
+        self.addTab(self.tela_turmas, "Turmas")
         self.addTab(self.tela_excecoes, "Exceções do nivelamento")
         self.tela_materias.materias_mudaram.connect(self.tela_questoes.recarregar_materias)
         self.tela_materias.materias_mudaram.connect(self.tela_professores.recarregar)
+        self.tela_materias.materias_mudaram.connect(self.tela_turmas.recarregar)
         self.tela_materias.materias_mudaram.connect(self.tela_excecoes.recarregar_materias)
+        self.tela_professores.professores_mudaram.connect(self.tela_turmas.recarregar)
 
 
 class TelaInicio(QWidget):
@@ -165,9 +176,7 @@ class JanelaPrincipal(QMainWindow):
             return AreaDoAdm(usuario, self._casos_de_uso)
         if usuario.perfil == Perfil.ALUNO:
             return AreaDoAluno(usuario, self._casos_de_uso.nivelamento)
-        aviso = QLabel(AVISO_DO_PROFESSOR)
-        aviso.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        return aviso
+        return TelaMinhasTurmas(usuario, self._casos_de_uso.turmas)
 
     def _encerrar_area(self) -> None:
         """Quem sai no meio do nivelamento tem o tempo parado antes de a conexão fechar."""
