@@ -17,6 +17,9 @@ from PySide6.QtWidgets import (
 )
 
 from plataforma.acoes import executar
+from plataforma.modules.catalogo.application.casos_de_uso import CasosDeUsoDoCatalogo
+from plataforma.modules.catalogo.ui.telas_do_adm import TelaPacotes
+from plataforma.modules.catalogo.ui.telas_do_professor import TelaMeusPacotes
 from plataforma.modules.identidade.application.casos_de_uso import CasosDeUsoDaIdentidade
 from plataforma.modules.identidade.domain.usuario import Perfil, Usuario
 from plataforma.modules.identidade.ui.telas import (
@@ -51,6 +54,7 @@ class CasosDeUso:
     matricula: CasosDeUsoDaMatricula
     aulas: CasosDeUsoDasAulas
     prova_final: CasosDeUsoDaProvaFinal
+    catalogo: CasosDeUsoDoCatalogo
 
 
 def por_as_turmas_em_dia(usuario: Usuario, turmas: CasosDeUsoDeTurmas) -> None:
@@ -105,9 +109,27 @@ class AbasDoAluno(QTabWidget):
         self.setTabText(self.indexOf(self.turmas), titulo)
 
 
+class AbasDoProfessor(QTabWidget):
+    """Abas do professor: as turmas que o ADM atribuiu a ele e os pacotes que ele criou."""
+
+    def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUso) -> None:
+        super().__init__()
+        casos = casos_de_uso
+        self.turmas = TelaMinhasTurmas(usuario, casos.turmas, casos.aulas, casos.prova_final)
+        self.pacotes = TelaMeusPacotes(usuario, casos.catalogo)
+        self.addTab(self.turmas, "Minhas turmas")
+        self.addTab(self.pacotes, "Meus pacotes")
+        self.currentChanged.connect(self._ao_trocar_de_aba)
+
+    def _ao_trocar_de_aba(self, _indice: int) -> None:
+        # O ADM pode ter publicado ou devolvido um pacote desde que a aba foi lida.
+        if self.currentWidget() is self.pacotes:
+            self.pacotes.recarregar()
+
+
 class AreaDoAdm(QTabWidget):
     """Abas do ADM: as matérias, as questões do nivelamento, os professores, as turmas, a
-    presença e as notas de qualquer turma e as exceções do nivelamento."""
+    presença e as notas de qualquer turma, as exceções do nivelamento e os pacotes."""
 
     def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUso) -> None:
         super().__init__()
@@ -136,7 +158,9 @@ class AreaDoAdm(QTabWidget):
         self.addTab(self.tela_professores, "Professores")
         self.addTab(self.tela_turmas, "Turmas")
         self.addTab(self.tela_presenca_e_notas, "Presença e notas")
+        self.tela_pacotes = TelaPacotes(usuario, casos_de_uso.catalogo)
         self.addTab(self.tela_excecoes, "Exceções do nivelamento")
+        self.addTab(self.tela_pacotes, "Pacotes")
         self.tela_materias.materias_mudaram.connect(self.tela_questoes.recarregar_materias)
         self.tela_materias.materias_mudaram.connect(self.tela_professores.recarregar)
         self.tela_materias.materias_mudaram.connect(self.tela_turmas.recarregar)
@@ -148,6 +172,9 @@ class AreaDoAdm(QTabWidget):
         # As turmas podem ter mudado na aba Turmas: a presença e as notas leem tudo de novo.
         if self.currentWidget() is self.tela_presenca_e_notas:
             self.tela_presenca_e_notas.recarregar()
+        # Um professor pode ter enviado um pacote para revisão desde que a aba foi lida.
+        elif self.currentWidget() is self.tela_pacotes:
+            self.tela_pacotes.recarregar()
 
 
 class TelaInicio(QWidget):
@@ -248,8 +275,7 @@ class JanelaPrincipal(QMainWindow):
             return AreaDoAdm(usuario, self._casos_de_uso)
         if usuario.perfil == Perfil.ALUNO:
             return AbasDoAluno(usuario, self._casos_de_uso)
-        casos = self._casos_de_uso
-        return TelaMinhasTurmas(usuario, casos.turmas, casos.aulas, casos.prova_final)
+        return AbasDoProfessor(usuario, self._casos_de_uso)
 
     def _encerrar_area(self) -> None:
         """Quem sai no meio do nivelamento tem o tempo parado antes de a conexão fechar."""
