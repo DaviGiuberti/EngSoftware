@@ -62,7 +62,7 @@ from plataforma.modules.turmas.domain.presenca import (
 )
 from plataforma.modules.turmas.domain.turma import Turma
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
-from tests.integracao.conftest import RelogioDeTeste
+from tests.integracao.conftest import RelogioDeTeste, pagar_mensalidades
 
 ADM = Usuario(id=1000, email="adm@exemplo.com", perfil=Perfil.ADM)
 TER_E_QUI = (DiaDaSemana.TERCA, DiaDaSemana.QUINTA)
@@ -175,7 +175,8 @@ def carlos(escola: Escola, fisica: Materia) -> Usuario:
 @dataclass(frozen=True)
 class TurmaDoCarlos:
     """Turma de Física do Carlos, criada na segunda 23/11/2026, com Ana e Bruno desde o início.
-    A 1ª aula é na terça 24/11, e a 5ª, na terça 08/12, às 19h."""
+    A 1ª aula é na terça 24/11, e a 5ª, na terça 08/12, às 19h. Os dois têm as mensalidades
+    pagas, para não perderem a vaga por atraso (R28)."""
 
     turma: Turma
     ana: Usuario
@@ -189,6 +190,8 @@ def turma_do_carlos(escola: Escola, fisica: Materia, carlos: Usuario) -> TurmaDo
     bruno = escola.aluno("bruno@exemplo.com", fisica)
     escola.matricular.executar(ana, turma.id)
     escola.matricular.executar(bruno, turma.id)
+    for aluno in (ana, bruno):
+        pagar_mensalidades(escola.conexao, aluno.id, turma.id)
     return TurmaDoCarlos(turma, ana, bruno)
 
 

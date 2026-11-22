@@ -93,7 +93,7 @@ from plataforma.modules.turmas.domain.prova_final import (
 )
 from plataforma.modules.turmas.domain.turma import Turma, TurmaAberta, TurmaEncerrada
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
-from tests.integracao.conftest import RelogioDeTeste
+from tests.integracao.conftest import RelogioDeTeste, pagar_mensalidades
 
 ADM = Usuario(id=1000, email="adm@exemplo.com", perfil=Perfil.ADM)
 TER_E_QUI = (DiaDaSemana.TERCA, DiaDaSemana.QUINTA)
@@ -295,7 +295,8 @@ def carlos(escola: Escola, fisica: Materia) -> Usuario:
 
 @dataclass(frozen=True)
 class TurmaDoCarlos:
-    """Turma de Física do Carlos criada em 16/12/2026, com Ana e Bruno desde a 1ª aula."""
+    """Turma de Física do Carlos criada em 16/12/2026, com Ana e Bruno desde a 1ª aula e as
+    mensalidades pagas, para não perderem a vaga por atraso (R28)."""
 
     turma: Turma
     ana: Usuario
@@ -311,6 +312,8 @@ def turma_com_ana_e_bruno(
     bruno = escola.aluno("bruno@exemplo.com", fisica, nivel)
     escola.matricular.executar(ana, turma.id)
     escola.matricular.executar(bruno, turma.id)
+    for aluno in (ana, bruno):
+        pagar_mensalidades(escola.conexao, aluno.id, turma.id)
     return TurmaDoCarlos(turma, ana, bruno)
 
 
@@ -686,6 +689,7 @@ def test_r50_no_fim_da_etapa_bruno_sai_da_lista_e_a_turma_comeca_o_n3_com_a_list
     for numero in range(1, 13):
         aluno = escola.aluno(f"aluno{numero}@exemplo.com", fisica, 2)
         escola.matricular.executar(aluno, turma.id)
+        pagar_mensalidades(escola.conexao, aluno.id, turma.id)
     bruno = escola.aluno("bruno@exemplo.com", fisica, 2)
     escola.entrar_na_lista.executar(bruno, turma.id)
     escola.ir_para(em(9, 3, 20, 29))
