@@ -55,6 +55,8 @@ Output é o que a equipe fez: pacotes cadastrados, turmas criadas, testes aplica
 - **O que mostra:** o aluno deixou de estar perdido e foi direto do nivelamento para conteúdo do seu nível.
 - **Como o sistema calcula:** para cada aluno, conta os dias entre a conclusão do nivelamento e a primeira atividade de estudo no nível que recebeu, seja uma presença numa turma desse nível ou uma aula gravada concluída de um pacote desse nível. A métrica é a mediana desses tempos.
 
+As regras de cálculo de cada métrica, como a 4ª semana da M2 e a mediana da M3, estão na seção "Métricas" do [regras.md](regras.md) (R64 a R67).
+
 ### De onde vêm os dados
 
 As três métricas usam só registros que o sistema já precisa guardar para funcionar: data e resultado do nivelamento, presenças, aulas gravadas concluídas e subidas de nível com data. Não há coleta extra nem ferramenta de analytics.

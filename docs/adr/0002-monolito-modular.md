@@ -42,3 +42,6 @@ A Matéria ganhou um módulo próprio, `materias`, na fatia 2. Ela é usada pelo
 
 ## Atualização de 2026-11-22: catalogo e vendas
 Na fatia 12, a vitrine, as aulas que o aluno assiste e as aulas concluídas ficam no `catalogo`, e a compra e o acesso ficam no `vendas`. O `vendas` lê os pacotes pela consulta pública do `catalogo` para vender só os publicados, pelo preço do momento. O `catalogo` precisa saber se o aluno tem acesso ao pacote, mas não importa o `vendas`: ele declara uma porta, `Acessos`, e o `main.py` liga a ela a consulta de acessos do `vendas`. Assim a dependência entre os dois módulos tem um sentido só, do `vendas` para o `catalogo`.
+
+## Atualização de 2026-11-22: módulo metricas
+As métricas M1, M2 e M3 ganharam um módulo próprio, `metricas`, na fatia 14. Elas cruzam dados de três módulos: os nivelamentos e as promoções do `nivelamento`, as presenças das `turmas` e as aulas concluídas do `catalogo`. Cada um desses módulos ganhou uma consulta pública só de leitura, e o `metricas` as usa sem ler as tabelas de ninguém. Nenhum módulo importa o `metricas`, e ele não tem tabela própria: os números são calculados na hora, a partir do que os outros já guardam.

@@ -993,31 +993,36 @@ Cenário: R57 — o pacote arquivado não é editado
 
 ### H36 · Ver as métricas
 
-Como ADM, quero ver as métricas M1, M2 e M3 do período para saber se a plataforma está resolvendo o problema do aluno. Prioridade: Alta. Regras: nenhuma (vem da seção 4 do visao.md).
+Como ADM, quero ver as métricas M1, M2 e M3 do período para saber se a plataforma está resolvendo o problema do aluno. Prioridade: Alta. Regras: R64, R65, R66, R67 (da seção 4 do visao.md).
 
 ```gherkin
-Cenário: M1 — taxa de progressão
+Cenário: M1, R64 e R65 — taxa de progressão
   Dados 10 alunos que concluíram o nivelamento de Física em março
   E 3 deles promovidos em até 6 meses depois do nivelamento
   Quando o ADM abre as métricas de março
   Então ele vê M1 = 30%
 
-Cenário: M2 — continuidade na trilha
-  Dados 10 alunos que fizeram o nivelamento há mais de 4 semanas
-  E 5 deles com uma presença ou uma aula gravada concluída na 4ª semana depois do nivelamento
-  Quando o ADM abre as métricas
+Cenário: M2 e R66 — continuidade na trilha
+  Dados 10 alunos que fizeram o nivelamento de Física em março, há pelo menos 4 semanas
+  E 5 deles com uma presença ou uma aula gravada concluída de Física na 4ª semana depois do nivelamento
+  Quando o ADM abre as métricas de março
   Então ele vê M2 = 50%
 
-Cenário: M3 — tempo até estudar no nível certo
-  Dados 3 alunos cuja primeira atividade de estudo no nível recebido veio 1, 2 e 6 dias depois do nivelamento
-  Quando o ADM abre as métricas
+Cenário: M3 e R67 — tempo até estudar no nível certo
+  Dados 3 alunos, nivelados em Física em março, cuja primeira atividade de estudo no nível recebido veio 1, 2 e 6 dias depois do nivelamento
+  Quando o ADM abre as métricas de março
   Então ele vê M3 = 2 dias
 
-Cenário: M3 — atividade em outro nível não conta
+Cenário: M3 e R67 — atividade em outro nível não conta
   Dado um aluno que ficou no N2 de Física pelo nivelamento
   E que só concluiu aulas de um pacote de Física do N1
-  Quando o ADM abre as métricas
+  Quando o ADM abre as métricas do mês do nivelamento
   Então esse aluno ainda não entra no cálculo da M3
+
+Cenário: R67 — mediana com um número par de alunos
+  Dados 4 alunos, nivelados em Física em março, cuja primeira atividade de estudo no nível recebido veio 1, 2, 3 e 6 dias depois do nivelamento
+  Quando o ADM abre as métricas de março
+  Então ele vê M3 = 2,5 dias
 ```
 
 ### H37 · Criar cupons
@@ -1145,3 +1150,7 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R61 | H16 |
 | R62 | H16, H17 |
 | R63 | H17 |
+| R64 | H36 |
+| R65 | H36 |
+| R66 | H36 |
+| R67 | H36 |

@@ -204,3 +204,19 @@ O cupom dá desconto só percentual, de no máximo 50%. Tem validade, limite tot
 
 R16 *(alterada)* **[Fora do MVP]**
 O certificado de pacote exige 100% das aulas concluídas e nota ≥ 6 no simulado. O simulado é de múltipla escolha, feito na plataforma, liberado só depois de 100% das aulas, com uma única tentativa; o ADM pode liberar nova tentativa. Se o professor adicionar uma aula ao pacote, o certificado já emitido continua valendo, e para quem ainda não tem certificado a aula nova passa a contar nos 100%. (14.3, 15.1–15.3)
+
+## Métricas
+
+As métricas M1, M2 e M3 vêm da seção 4 da [visão](visao.md). As regras abaixo dizem como o sistema as calcula.
+
+R64
+As métricas contam cada aluno numa matéria pelo primeiro nivelamento que ele concluiu nela; o nivelamento refeito (R42) não conta como novo. O ADM escolhe um mês, e entram os nivelamentos concluídos nele. A atividade de estudo é a presença numa aula de uma turma da matéria (a falta não conta) ou uma aula gravada concluída de um pacote da matéria. (H36)
+
+R65
+A M1 é a porcentagem dos nivelados do mês que foram promovidos na matéria até o mesmo dia, 6 meses depois do nivelamento; no mês que não tem esse dia, até o último dia dele. Entram todos os nivelados do mês, e a tela diz quantos ainda estão dentro dos 6 meses sem promoção. (H36)
+
+R66
+A M2 é a porcentagem dos nivelados do mês, há pelo menos 28 dias, que tiveram atividade de estudo na matéria na 4ª semana depois do nivelamento: do 21º ao 27º dia, contando o dia do nivelamento como o dia 0. (H36)
+
+R67
+A M3 é a mediana dos dias de calendário entre o nivelamento e a primeira atividade de estudo na matéria e no nível que esse nivelamento deu. Com um número par de alunos, é a média dos dois do meio, com uma casa decimal. Quem ainda não teve atividade nesse nível não entra no cálculo. (H36)

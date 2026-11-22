@@ -100,10 +100,12 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 
 | Termo | Significado | Nome no código |
 |---|---|---|
-| Atividade de estudo | Presença numa aula da turma ou aula gravada concluída. É o que as métricas contam. | `AtividadeDeEstudo` |
-| M1, taxa de progressão | Porcentagem dos alunos que concluíram o nivelamento no período e foram promovidos pelo menos uma vez em até 6 meses. | `taxa_de_progressao` |
-| M2, continuidade na trilha | Porcentagem dos alunos com nivelamento feito há pelo menos 4 semanas que tiveram atividade de estudo na 4ª semana. | `continuidade_na_trilha` |
-| M3, tempo até estudar no nível certo | Mediana dos dias entre o nivelamento e a primeira atividade de estudo no nível recebido. | `tempo_ate_nivel_certo` |
+| Nivelado | Um aluno numa matéria, pelo primeiro nivelamento que ele concluiu nela, com a data e o nível que recebeu. É a unidade das métricas; o nivelamento refeito não conta como novo (R64). | `Nivelado` |
+| Período | Mês escolhido pelo ADM nas métricas. Entram os nivelados cujo nivelamento foi concluído nele (R64). | `ano`, `mes` |
+| Atividade de estudo | Presença numa aula de uma turma da matéria (a falta não conta) ou aula gravada concluída de um pacote da matéria, com a matéria, o nível e a data. É o que a M2 e a M3 contam (R64). | `AtividadeDeEstudo` |
+| M1, taxa de progressão | Porcentagem dos nivelados do período promovidos na matéria em até 6 meses depois do nivelamento. Entram todos, e a tela diz quantos ainda estão dentro dos 6 meses (R65). | `taxa_de_progressao` |
+| M2, continuidade na trilha | Porcentagem dos nivelados do período, há pelo menos 28 dias, com atividade de estudo na matéria na 4ª semana: do 21º ao 27º dia depois do nivelamento (R66). | `continuidade_na_trilha` |
+| M3, tempo até estudar no nível certo | Mediana dos dias de calendário entre o nivelamento e a primeira atividade de estudo na matéria e no nível recebido; com número par, a média dos dois do meio (R67). | `tempo_ate_nivel_certo` |
 
 ## Termos que não usamos
 
