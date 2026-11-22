@@ -17,7 +17,10 @@ from plataforma.banco import (
 from plataforma.compartilhado.relogio import Relogio
 from plataforma.janela_principal import CasosDeUso, JanelaPrincipal
 from plataforma.log import configurar_log, fechar_log
-from plataforma.modules.catalogo.application.aulas_do_aluno import montar_casos_de_uso_do_aluno
+from plataforma.modules.catalogo.application.aulas_do_aluno import (
+    ApagarAulasConcluidas,
+    montar_casos_de_uso_do_aluno,
+)
 from plataforma.modules.catalogo.application.casos_de_uso import (
     ConsultaDePacotes,
     montar_casos_de_uso,
@@ -178,6 +181,7 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
     )
     pacotes = RepositorioDePacotesSqlite(conexao)
     compras = RepositorioDeComprasSqlite(conexao)
+    concluidas = RepositorioDeAulasConcluidasSqlite(conexao)
     casos_de_uso = CasosDeUso(
         identidade=CasosDeUsoDaIdentidade(
             cadastrar_aluno=CadastrarAluno(usuarios, em_transacao),
@@ -247,7 +251,7 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
         # O catalogo pergunta o acesso ao vendas pela porta Acessos (ADR 0002).
         catalogo_do_aluno=montar_casos_de_uso_do_aluno(
             pacotes,
-            RepositorioDeAulasConcluidasSqlite(conexao),
+            concluidas,
             consulta_de_materias,
             consulta_de_professores,
             niveis,
@@ -255,8 +259,13 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
             relogio,
             em_transacao,
         ),
+        # No reembolso, o vendas apaga as aulas concluídas pelo serviço do catalogo (R63).
         vendas=montar_casos_de_uso_de_vendas(
-            compras, ConsultaDePacotes(pacotes), relogio, em_transacao
+            compras,
+            ConsultaDePacotes(pacotes),
+            ApagarAulasConcluidas(concluidas),
+            relogio,
+            em_transacao,
         ),
     )
 

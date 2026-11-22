@@ -41,6 +41,10 @@ class RepositorioDeAulasConcluidas(Protocol):
 
     def adicionar(self, aluno_id: int, concluida: AulaConcluida) -> None: ...
 
+    def apagar(self, aluno_id: int, pacote_id: int) -> None:
+        """Apaga as aulas que o aluno concluiu no pacote, no reembolso (R63)."""
+        ...
+
 
 class Acessos(Protocol):
     """O acesso que a compra dá, que é do módulo vendas. O main.py liga esta porta à consulta de

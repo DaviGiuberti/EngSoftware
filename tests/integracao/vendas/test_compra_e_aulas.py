@@ -1,5 +1,5 @@
-"""Vitrine, compra e aulas gravadas com o banco SQLite (H14, H15, H16, H34, H35): R12, R15, R31,
-R32, R59, R60, R61, R62 e RNF07."""
+"""Vitrine, compra, aulas gravadas e reembolso com o banco SQLite (H14, H15, H16, H17, H34, H35):
+R12, R13, R15, R31, R32, R59, R60, R61, R62, R63, RNF05 e RNF07."""
 
 import sqlite3
 from dataclasses import dataclass
@@ -10,6 +10,7 @@ import pytest
 from plataforma.compartilhado.horario import BRASILIA
 from plataforma.compartilhado.transacao import Transacao
 from plataforma.modules.catalogo.application.aulas_do_aluno import (
+    ApagarAulasConcluidas,
     CasosDeUsoDoAluno,
     montar_casos_de_uso_do_aluno,
 )
@@ -60,7 +61,13 @@ from plataforma.modules.vendas.application.casos_de_uso import (
     ConsultaDeAcessos,
     montar_casos_de_uso_de_vendas,
 )
-from plataforma.modules.vendas.domain.compra import AcessoAtivo, ForaDeVenda
+from plataforma.modules.vendas.domain.compra import (
+    AcessoAtivo,
+    ForaDeVenda,
+    PrazoDoReembolso,
+    SemCompra,
+    SemDireitoAReembolso,
+)
 from plataforma.modules.vendas.infra.repositorio_de_compras import RepositorioDeComprasSqlite
 from tests.integracao.conftest import RelogioDeTeste
 
@@ -127,13 +134,14 @@ def escola(conexao: sqlite3.Connection, em_transacao: Transacao) -> Escola:
     professores = ConsultaDeProfessores(repositorio_de_professores)
     consulta = ConsultaDePacotes(pacotes)
     compras = RepositorioDeComprasSqlite(conexao)
+    concluidas = RepositorioDeAulasConcluidasSqlite(conexao)
     nivelamentos = RepositorioDeNivelamentosSqlite(conexao)
     niveis = ConsultaDeNiveis(nivelamentos)
     return Escola(
         catalogo=montar_casos_de_uso(pacotes, materias, professores, em_transacao),
         aluno=montar_casos_de_uso_do_aluno(
             pacotes,
-            RepositorioDeAulasConcluidasSqlite(conexao),
+            concluidas,
             materias,
             professores,
             niveis,
@@ -141,7 +149,9 @@ def escola(conexao: sqlite3.Connection, em_transacao: Transacao) -> Escola:
             relogio,
             em_transacao,
         ),
-        vendas=montar_casos_de_uso_de_vendas(compras, consulta, relogio, em_transacao),
+        vendas=montar_casos_de_uso_de_vendas(
+            compras, consulta, ApagarAulasConcluidas(concluidas), relogio, em_transacao
+        ),
         consulta=consulta,
         niveis=niveis,
         nivelamentos=nivelamentos,
@@ -409,3 +419,121 @@ def test_rnf07_so_o_aluno_ve_a_vitrine_e_conclui_aulas(escola: Escola) -> None:
         escola.aluno.ver_vitrine.executar(ADM)
     with pytest.raises(AcessoNegado, match="Só o aluno pode concluir aula gravada."):
         escola.aluno.concluir_aula.executar(escola.carlos, pacote.id, 1)
+
+
+# H17: pedir reembolso de um pacote
+
+
+def test_r13_pedido_no_ultimo_minuto_do_7o_dia_e_aceito(escola: Escola) -> None:
+    pacote = escola.pacote("Cinemática", 1)
+    escola.vendas.comprar.executar(escola.ana, pacote.id)
+    escola.ir_para(em(17, 3, hora=23, minuto=59))
+
+    reembolsada = escola.vendas.pedir_reembolso.executar(escola.ana, pacote.id)
+
+    assert reembolsada.reembolsada_em == em(17, 3, hora=23, minuto=59)
+    assert reembolsada.valor_em_centavos == 12000
+
+
+def test_r13_pedido_depois_do_7o_dia_e_recusado(escola: Escola) -> None:
+    pacote = escola.pacote("Cinemática", 1)
+    escola.vendas.comprar.executar(escola.ana, pacote.id)
+    escola.ir_para(em(18, 3, hora=0))
+
+    with pytest.raises(PrazoDoReembolso, match="até as 23h59 de 17/03/2027"):
+        escola.vendas.pedir_reembolso.executar(escola.ana, pacote.id)
+
+    [comprado] = escola.aluno.ver_pacotes_comprados.executar(escola.ana)
+    assert comprado.acesso.ativo
+
+
+def test_r13_o_reembolso_nao_depende_do_quanto_foi_assistido(escola: Escola) -> None:
+    pacote = escola.pacote("Cinemática", 1, aulas=3)
+    escola.vendas.comprar.executar(escola.ana, pacote.id)
+    for numero in (1, 2, 3):
+        escola.aluno.concluir_aula.executar(escola.ana, pacote.id, numero)
+    escola.ir_para(em(12, 3))
+
+    reembolsada = escola.vendas.pedir_reembolso.executar(escola.ana, pacote.id)
+
+    assert reembolsada.reembolsada_em == em(12, 3)
+
+
+def test_r12_r62_r63_o_reembolso_encerra_o_acesso_e_apaga_as_aulas_concluidas(
+    escola: Escola,
+) -> None:
+    pacote = escola.pacote("Cinemática", 1, aulas=3)
+    escola.vendas.comprar.executar(escola.ana, pacote.id)
+    escola.aluno.concluir_aula.executar(escola.ana, pacote.id, 1)
+    escola.aluno.concluir_aula.executar(escola.ana, pacote.id, 2)
+
+    escola.vendas.pedir_reembolso.executar(escola.ana, pacote.id)
+
+    assert escola.aluno.ver_pacotes_comprados.executar(escola.ana) == []
+    with pytest.raises(SemAcesso, match="Você não tem acesso a este pacote."):
+        escola.aluno.assistir.executar(escola.ana, pacote.id, 1)
+    [na_vitrine] = escola.aluno.ver_vitrine.executar(escola.ana)
+    assert na_vitrine.acesso is None
+    escola.vendas.comprar.executar(escola.ana, pacote.id)
+    [comprado] = escola.aluno.ver_pacotes_comprados.executar(escola.ana)
+    assert (comprado.progresso, comprado.concluidas) == ((0, 3), {})
+
+
+def test_r13_recompra_sem_direito_a_reembolso(escola: Escola) -> None:
+    pacote = escola.pacote("Cinemática", 1)
+    escola.vendas.comprar.executar(escola.ana, pacote.id)
+    escola.ir_para(em(12, 3))
+    escola.vendas.pedir_reembolso.executar(escola.ana, pacote.id)
+    escola.ir_para(em(20, 3))
+    escola.vendas.comprar.executar(escola.ana, pacote.id)
+    escola.ir_para(em(21, 3))
+
+    with pytest.raises(SemDireitoAReembolso):
+        escola.vendas.pedir_reembolso.executar(escola.ana, pacote.id)
+
+    [comprado] = escola.aluno.ver_pacotes_comprados.executar(escola.ana)
+    assert comprado.acesso == AcessoAoPacote(date(2028, 3, 20), ativo=True)
+
+
+def test_o_reembolso_de_um_aluno_nao_apaga_as_aulas_de_outro(escola: Escola) -> None:
+    pacote = escola.pacote("Cinemática", 1, aulas=2)
+    escola.vendas.comprar.executar(escola.ana, pacote.id)
+    escola.vendas.comprar.executar(escola.bruno, pacote.id)
+    escola.aluno.concluir_aula.executar(escola.bruno, pacote.id, 1)
+
+    escola.vendas.pedir_reembolso.executar(escola.ana, pacote.id)
+
+    [do_bruno] = escola.aluno.ver_pacotes_comprados.executar(escola.bruno)
+    assert do_bruno.progresso == (1, 2)
+
+
+def test_rnf07_so_o_aluno_que_comprou_pede_reembolso(escola: Escola) -> None:
+    pacote = escola.pacote("Cinemática", 1)
+    escola.vendas.comprar.executar(escola.ana, pacote.id)
+
+    with pytest.raises(AcessoNegado, match="Só o aluno pode pedir reembolso."):
+        escola.vendas.pedir_reembolso.executar(escola.carlos, pacote.id)
+    with pytest.raises(SemCompra, match="Você não comprou este pacote."):
+        escola.vendas.pedir_reembolso.executar(escola.bruno, pacote.id)
+
+    [da_ana] = escola.aluno.ver_pacotes_comprados.executar(escola.ana)
+    assert da_ana.acesso.ativo
+
+
+def test_rnf05_erro_ao_apagar_as_aulas_concluidas_nao_reembolsa(
+    escola: Escola, conexao: sqlite3.Connection
+) -> None:
+    pacote = escola.pacote("Cinemática", 1)
+    escola.vendas.comprar.executar(escola.ana, pacote.id)
+    escola.aluno.concluir_aula.executar(escola.ana, pacote.id, 1)
+    # A compra é marcada como reembolsada antes de as aulas serem apagadas.
+    conexao.execute(
+        "CREATE TRIGGER falha_ao_apagar BEFORE DELETE ON aula_concluida "
+        "BEGIN SELECT RAISE(ABORT, 'falha forçada no teste'); END"
+    )
+
+    with pytest.raises(sqlite3.DatabaseError, match="falha forçada no teste"):
+        escola.vendas.pedir_reembolso.executar(escola.ana, pacote.id)
+
+    [comprado] = escola.aluno.ver_pacotes_comprados.executar(escola.ana)
+    assert (comprado.acesso.ativo, comprado.progresso) == (True, (1, 1))

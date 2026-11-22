@@ -27,12 +27,16 @@ from plataforma.compartilhado.horario import BRASILIA
 from plataforma.compartilhado.transacao import Transacao
 from plataforma.janela_principal import JanelaPrincipal
 from plataforma.main import criar_janela
+from plataforma.modules.catalogo.application.aulas_do_aluno import ApagarAulasConcluidas
 from plataforma.modules.catalogo.application.casos_de_uso import (
     CasosDeUsoDoCatalogo,
     ConsultaDePacotes,
     montar_casos_de_uso,
 )
 from plataforma.modules.catalogo.domain.pacote import EstadoPacote
+from plataforma.modules.catalogo.infra.repositorio_de_aulas_concluidas import (
+    RepositorioDeAulasConcluidasSqlite,
+)
 from plataforma.modules.catalogo.infra.repositorio_de_pacotes import RepositorioDePacotesSqlite
 from plataforma.modules.identidade.application.casos_de_uso import (
     CadastrarAluno,
@@ -74,7 +78,10 @@ from plataforma.modules.turmas.application.presenca import LancarPresenca
 from plataforma.modules.turmas.application.prova_final import LancarNota
 from plataforma.modules.turmas.domain.horario import DiaDaSemana
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
-from plataforma.modules.vendas.application.casos_de_uso import montar_casos_de_uso_de_vendas
+from plataforma.modules.vendas.application.casos_de_uso import (
+    CasosDeUsoDeVendas,
+    montar_casos_de_uso_de_vendas,
+)
 from plataforma.modules.vendas.infra.repositorio_de_compras import RepositorioDeComprasSqlite
 from tests.integracao.conftest import pagar_mensalidades
 
@@ -340,13 +347,21 @@ class App:
     def preparar_compra(self, aluno: Usuario, pacote_id: int) -> None:
         """O aluno compra o pacote antes de abrir o app, na hora do relógio do app."""
         with self._no_banco() as (conexao, em_transacao, _):
-            vendas = montar_casos_de_uso_de_vendas(
-                RepositorioDeComprasSqlite(conexao),
-                ConsultaDePacotes(RepositorioDePacotesSqlite(conexao)),
-                self.relogio,
-                em_transacao,
-            )
-            vendas.comprar.executar(aluno, pacote_id)
+            self._vendas(conexao, em_transacao).comprar.executar(aluno, pacote_id)
+
+    def preparar_reembolso(self, aluno: Usuario, pacote_id: int) -> None:
+        """O aluno pede o reembolso do pacote antes de abrir o app, na hora do relógio do app."""
+        with self._no_banco() as (conexao, em_transacao, _):
+            self._vendas(conexao, em_transacao).pedir_reembolso.executar(aluno, pacote_id)
+
+    def _vendas(self, conexao: sqlite3.Connection, em_transacao: Transacao) -> CasosDeUsoDeVendas:
+        return montar_casos_de_uso_de_vendas(
+            RepositorioDeComprasSqlite(conexao),
+            ConsultaDePacotes(RepositorioDePacotesSqlite(conexao)),
+            ApagarAulasConcluidas(RepositorioDeAulasConcluidasSqlite(conexao)),
+            self.relogio,
+            em_transacao,
+        )
 
     @staticmethod
     def _catalogo(conexao: sqlite3.Connection, em_transacao: Transacao) -> CasosDeUsoDoCatalogo:

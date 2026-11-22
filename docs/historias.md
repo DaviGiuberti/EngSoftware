@@ -479,7 +479,7 @@ Cenário: R62 — a aula concluída não é marcada de novo
 
 ### H17 · Pedir reembolso de um pacote
 
-Como aluno, quero pedir reembolso de um pacote até o 7º dia depois da compra para recuperar o dinheiro se ele não me servir. Prioridade: Média. Regras: R12, R13.
+Como aluno, quero pedir reembolso de um pacote até o 7º dia depois da compra para recuperar o dinheiro se ele não me servir. Prioridade: Média. Regras: R12, R13, R62, R63.
 
 ```gherkin
 Cenário: R13 — pedido no último minuto do 7º dia
@@ -497,10 +497,11 @@ Cenário: R13 — o reembolso não depende do quanto foi assistido
   Quando ele pede reembolso em 12/03
   Então o reembolso é aceito
 
-Cenário: R12 — o reembolso encerra o acesso
-  Dado um aluno com reembolso aceito de um pacote
-  Quando ele tenta abrir uma aula do pacote
-  Então o sistema bloqueia a aula
+Cenário: R12, R62 e R63 — o reembolso encerra o acesso
+  Dado um aluno que concluiu 2 aulas de um pacote
+  Quando o reembolso dele é aceito
+  Então o pacote sai de "Meus pacotes", sem as aulas concluídas
+  E ele não consegue abrir as aulas do pacote
 
 Cenário: R13 — recompra sem direito a reembolso
   Dado um aluno reembolsado que comprou o mesmo pacote de novo em 20/03
@@ -1142,4 +1143,5 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R59 | H34, H35 |
 | R60 | H15 |
 | R61 | H16 |
-| R62 | H16 |
+| R62 | H16, H17 |
+| R63 | H17 |

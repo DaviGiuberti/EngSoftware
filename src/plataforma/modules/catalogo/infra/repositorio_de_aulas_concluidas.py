@@ -27,3 +27,9 @@ class RepositorioDeAulasConcluidasSqlite:
             "VALUES (?, ?, ?, ?)",
             (aluno_id, concluida.pacote_id, concluida.numero, concluida.concluida_em.isoformat()),
         )
+
+    def apagar(self, aluno_id: int, pacote_id: int) -> None:
+        self._conexao.execute(
+            "DELETE FROM aula_concluida WHERE aluno_id = ? AND pacote_id = ?",
+            (aluno_id, pacote_id),
+        )
