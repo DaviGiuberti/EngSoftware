@@ -27,7 +27,11 @@ from plataforma.compartilhado.horario import BRASILIA
 from plataforma.compartilhado.transacao import Transacao
 from plataforma.janela_principal import JanelaPrincipal
 from plataforma.main import criar_janela
-from plataforma.modules.catalogo.application.casos_de_uso import montar_casos_de_uso
+from plataforma.modules.catalogo.application.casos_de_uso import (
+    CasosDeUsoDoCatalogo,
+    ConsultaDePacotes,
+    montar_casos_de_uso,
+)
 from plataforma.modules.catalogo.domain.pacote import EstadoPacote
 from plataforma.modules.catalogo.infra.repositorio_de_pacotes import RepositorioDePacotesSqlite
 from plataforma.modules.identidade.application.casos_de_uso import (
@@ -70,6 +74,8 @@ from plataforma.modules.turmas.application.presenca import LancarPresenca
 from plataforma.modules.turmas.application.prova_final import LancarNota
 from plataforma.modules.turmas.domain.horario import DiaDaSemana
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
+from plataforma.modules.vendas.application.casos_de_uso import montar_casos_de_uso_de_vendas
+from plataforma.modules.vendas.infra.repositorio_de_compras import RepositorioDeComprasSqlite
 from tests.integracao.conftest import pagar_mensalidades
 
 # Sem tela: a janela não aparece durante os testes, e o mesmo teste roda na CI.
@@ -299,15 +305,16 @@ class App:
         email_do_professor: str,
         aulas: int = 0,
         estado: EstadoPacote = EstadoPacote.RASCUNHO,
-    ) -> None:
+    ) -> int:
         """Cria, antes de abrir o app, o pacote do professor com as aulas "Aula 1", "Aula 2"... e
-        o leva até o estado pedido. O publicado custa R$ 120 (R59), e o arquivado também."""
+        o leva até o estado pedido. O publicado custa R$ 120 (R59), e o arquivado também.
+
+        Devolve o id do pacote.
+        """
         with self._no_banco() as (conexao, em_transacao, adm):
             materias = ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao))
             professores = ConsultaDeProfessores(RepositorioDeProfessoresSqlite(conexao))
-            casos = montar_casos_de_uso(
-                RepositorioDePacotesSqlite(conexao), materias, professores, em_transacao
-            )
+            casos = self._catalogo(conexao, em_transacao)
             materia_id = next(m.id for m in materias.listar() if m.nome == materia)
             professor = next(p for p in professores.listar() if p.email == email_do_professor)
             pacote = casos.criar_pacote.executar(professor.usuario, titulo, materia_id, nivel)
@@ -316,13 +323,39 @@ class App:
                     professor.usuario, pacote.id, f"Aula {numero}", f"youtu.be/aula{numero:07d}"
                 )
             if estado == EstadoPacote.RASCUNHO:
-                return
+                return pacote.id
             casos.enviar_para_revisao.executar(professor.usuario, pacote.id)
             if estado == EstadoPacote.EM_REVISAO:
-                return
+                return pacote.id
             casos.publicar.executar(adm, pacote.id, 12000)
             if estado == EstadoPacote.ARQUIVADO:
                 casos.arquivar.executar(adm, pacote.id)
+            return pacote.id
+
+    def arquivar_pacote(self, pacote_id: int) -> None:
+        """O ADM arquiva o pacote publicado antes de abrir o app."""
+        with self._no_banco() as (conexao, em_transacao, adm):
+            self._catalogo(conexao, em_transacao).arquivar.executar(adm, pacote_id)
+
+    def preparar_compra(self, aluno: Usuario, pacote_id: int) -> None:
+        """O aluno compra o pacote antes de abrir o app, na hora do relógio do app."""
+        with self._no_banco() as (conexao, em_transacao, _):
+            vendas = montar_casos_de_uso_de_vendas(
+                RepositorioDeComprasSqlite(conexao),
+                ConsultaDePacotes(RepositorioDePacotesSqlite(conexao)),
+                self.relogio,
+                em_transacao,
+            )
+            vendas.comprar.executar(aluno, pacote_id)
+
+    @staticmethod
+    def _catalogo(conexao: sqlite3.Connection, em_transacao: Transacao) -> CasosDeUsoDoCatalogo:
+        return montar_casos_de_uso(
+            RepositorioDePacotesSqlite(conexao),
+            ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao)),
+            ConsultaDeProfessores(RepositorioDeProfessoresSqlite(conexao)),
+            em_transacao,
+        )
 
     def preparar_mensalidades(self, aluno: Usuario, turma_id: int, quantas: int = 12) -> None:
         """Grava, antes de abrir o app, as próximas mensalidades do aluno como pagas em dia, para
