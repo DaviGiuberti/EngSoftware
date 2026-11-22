@@ -149,6 +149,15 @@ Com a mensalidade atrasada, o aluno tem 7 dias de tolerância; depois disso, per
 R37
 A tolerância da mensalidade vai até as 23h59 do 7º dia depois do vencimento. Na virada para o 8º dia, o aluno perde a vaga. (H07)
 
+R53
+A mensalidade seguinte fica em aberto quando a anterior vence, e só ela pode ser paga: quem se matriculou em 10/03 paga a de 10/04 de 10/03 até as 23h59 de 17/04, e a de 10/05 só a partir de 10/04. (H07)
+
+R54
+Depois que a turma encerra (R09), nenhuma mensalidade vence. A que venceu antes do encerramento continua valendo, com a tolerância (R28). (H07)
+
+R55
+Quem perde a vaga por atraso da mensalidade vê um aviso na aba Turmas até entrar em outra turma da matéria. (H07)
+
 R29
 Quem sai da turma por vontade própria não recebe reembolso da mensalidade. (12.1)
 

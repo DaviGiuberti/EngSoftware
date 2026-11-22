@@ -50,7 +50,7 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Aula dada | Aula que já começou e não foi marcada como não realizada. É a que conta nas 24 da etapa e no limite da matrícula, até antes da 13ª aula (R19, R43). | `aulas_dadas` |
 | Aula não realizada | Aula que não aconteceu (feriado, professor doente). Não conta nas 24 e é reposta no fim da etapa, no mesmo horário. O professor marca qualquer aula ainda sem presença, passada ou futura, e a marcação é definitiva (R18, R48). | `nao_realizadas` (as datas, na `Turma`) |
 | Calendário da etapa | As datas das aulas da etapa, da 1ª à 24ª, com as não realizadas no meio, sem número (R18, R43). | `calendario`, `AulaDaEtapa` |
-| Matrícula | Vínculo do aluno com uma turma. Começa com o pagamento da primeira mensalidade, só antes da 13ª aula da etapa, e guarda a aula de entrada, a partir da qual as faltas contam. O aluno tem no máximo uma por matéria (R08, R19, R27, R44). | `Matricula` (`aula_de_entrada`) |
+| Matrícula | Vínculo do aluno com uma turma. Começa com o pagamento da primeira mensalidade, só antes da 13ª aula da etapa, e guarda a aula de entrada, a partir da qual as faltas contam. O aluno tem no máximo uma por matéria (R08, R19, R27, R44). Quando ela termina, fica guardado o motivo: vontade própria (R29), reprovação (R21), conclusão da trilha (R09) ou atraso da mensalidade (R28). | `Matricula` (`aula_de_entrada`, `saiu_por`: `MotivoDaSaida`) |
 | Lista de espera | Lista, em ordem de entrada, dos alunos que esperam vaga numa turma cheia. Quando abre vaga, o 1º tem 72 horas para confirmar. O aluno pode estar na lista de várias turmas de uma matéria em que ainda não tem turma (R05, R44). No fim da etapa, ela é esvaziada (R50). | `ListaDeEspera` |
 | Oferta de vaga | Vaga que abriu numa turma com lista de espera e foi oferecida ao 1º da lista sem oferta. Ele tem 72 horas para confirmar, e enquanto isso a vaga fica reservada. Confirmar é se matricular; quem não confirma sai da lista. A partir da 13ª aula da etapa, a vaga não é oferecida (R05, R35, R45, R47). | `Oferta` (`prazo`) |
 | Presença | Registro, por aula e por aluno, de que ele esteve presente ou ausente. Lançado pelo professor da turma ou pelo ADM, só em aula que já começou, para os alunos que estão na turma desde aquela aula (R08, R10, R43). | `Presenca` |
@@ -74,7 +74,9 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 |---|---|---|
 | Mensalidade | Valor mensal da turma, definido por matéria. A primeira é paga na matrícula, e as seguintes vencem todo mês no dia da matrícula (R27). | `Mensalidade` |
 | Vencimento | Data em que uma mensalidade deve ser paga. No mês que não tem o dia da matrícula, é o último dia dele (R46). | `vencimento` |
-| Tolerância | Os 7 dias depois do vencimento em que o aluno com mensalidade atrasada ainda mantém a vaga (R28). | `tolerancia` |
+| Tolerância | Os 7 dias depois do vencimento em que o aluno com mensalidade atrasada ainda mantém a vaga, até as 23h59 do 7º dia (R28, R37). | `TOLERANCIA` |
+| Mensalidade em aberto | A mensalidade seguinte às pagas, que pode ser paga desde o vencimento da anterior até o fim da tolerância. Só uma fica em aberto por vez (R53). Depois que a turma encerra, nenhuma vence (R54). | `MensalidadeDevida`, `SituacaoDaMensalidade` |
+| Perda da vaga | Saída da turma de quem não pagou a mensalidade até o fim da tolerância, na virada para o 8º dia depois do vencimento (R28, R37). A vaga vai para a lista de espera (R05), e o aluno vê um aviso até entrar em outra turma da matéria (R55). | `perde_a_vaga_em` |
 | Pagamento | Pagamento simulado de uma mensalidade ou de uma compra. Não há gateway no MVP. | `Pagamento` |
 
 ## Pacotes gravados

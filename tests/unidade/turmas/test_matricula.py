@@ -1,14 +1,19 @@
-"""Matrícula (H04, H05, H06): só na turma do nível do aluno (R06), sem conflito de horário (R07),
-até antes da 13ª aula da etapa (R19), uma turma por matéria (R44) e com vaga livre (R04, R05)."""
+"""Matrícula (H04, H05, H06, H07): só na turma do nível do aluno (R06), sem conflito de horário
+(R07), até antes da 13ª aula da etapa (R19), uma turma por matéria (R44) e com vaga livre (R04,
+R05). Quem perde a vaga por atraso da mensalidade vê um aviso até entrar em outra turma da
+matéria (R55)."""
 
-from datetime import time
+from datetime import datetime, time
 
 import pytest
 
+from plataforma.compartilhado.horario import BRASILIA
 from plataforma.modules.turmas.domain.horario import DiaDaSemana, novo_horario
 from plataforma.modules.turmas.domain.matricula import (
     JaTemTurmaNaMateria,
+    Matricula,
     MatriculaFechada,
+    MotivoDaSaida,
     NivelDiferenteDaTurma,
     SemNivelNaMateria,
     SituacaoNaTurma,
@@ -21,6 +26,7 @@ from plataforma.modules.turmas.domain.matricula import (
     exigir_vaga,
     situacao_na_turma,
     vagas_livres,
+    vagas_perdidas,
 )
 from plataforma.modules.turmas.domain.turma import ConflitoDeHorario
 
@@ -120,3 +126,45 @@ def test_a_situacao_do_aluno_na_turma_decide_o_que_ele_pode_fazer(
     matriculado: bool, na_lista: bool, com_oferta: bool, livres: int, situacao: SituacaoNaTurma
 ) -> None:
     assert situacao_na_turma(matriculado, na_lista, com_oferta, livres) == situacao
+
+
+ANA, FISICA, MATEMATICA = 1, 10, 20
+TURMA_DE_FISICA, OUTRA_DE_FISICA, TURMA_DE_MATEMATICA = 100, 101, 200
+MATERIA_DA_TURMA = {
+    TURMA_DE_FISICA: FISICA,
+    OUTRA_DE_FISICA: FISICA,
+    TURMA_DE_MATEMATICA: MATEMATICA,
+}
+MATRICULOU_EM_10_03 = datetime(2027, 3, 10, 10, 0, tzinfo=BRASILIA)
+PERDEU_A_VAGA_EM_18_04 = datetime(2027, 4, 18, 0, 0, tzinfo=BRASILIA)
+PERDIDA = Matricula(
+    1, TURMA_DE_FISICA, ANA, MATRICULOU_EM_10_03, PERDEU_A_VAGA_EM_18_04, MotivoDaSaida.ATRASO
+)
+
+
+def test_r55_quem_perdeu_a_vaga_por_atraso_ve_o_aviso() -> None:
+    assert vagas_perdidas([PERDIDA], MATERIA_DA_TURMA) == [PERDIDA]
+
+
+def test_r55_o_aviso_some_quando_o_aluno_entra_em_outra_turma_da_materia() -> None:
+    outra = Matricula(
+        2, OUTRA_DE_FISICA, ANA, datetime(2027, 4, 20, 10, 0, tzinfo=BRASILIA)
+    )
+
+    assert vagas_perdidas([PERDIDA, outra], MATERIA_DA_TURMA) == []
+
+
+def test_r55_turma_de_outra_materia_nao_tira_o_aviso() -> None:
+    matematica = Matricula(
+        2, TURMA_DE_MATEMATICA, ANA, datetime(2027, 4, 20, 10, 0, tzinfo=BRASILIA)
+    )
+
+    assert vagas_perdidas([PERDIDA, matematica], MATERIA_DA_TURMA) == [PERDIDA]
+
+
+def test_r55_quem_saiu_por_outro_motivo_nao_ve_o_aviso() -> None:
+    saiu = Matricula(
+        1, TURMA_DE_FISICA, ANA, MATRICULOU_EM_10_03, PERDEU_A_VAGA_EM_18_04, MotivoDaSaida.VONTADE
+    )
+
+    assert vagas_perdidas([saiu], MATERIA_DA_TURMA) == []

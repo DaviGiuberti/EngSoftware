@@ -24,6 +24,8 @@ def preparar_ana_aprovada(app: App, nivel: int) -> None:
     )
     ana = app.preparar_aluno("ana@exemplo.com", {"Física": nivel})
     app.preparar_matricula(ana, turma_id)
+    # Com as mensalidades pagas, ela não perde a vaga por atraso até o fim da etapa (R28).
+    app.preparar_mensalidades(ana, turma_id)
     # Até a sexta 12/02/2027, às 10h, e depois até a segunda 15/02, às 10h.
     app.relogio.avancar(days=80, hours=20)
     app.preparar_nota(turma_id, nivel, ana, "8")

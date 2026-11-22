@@ -1,5 +1,6 @@
-"""Matrícula, lista de espera e saída da turma com o banco SQLite e um relógio de teste (H04, H05,
-H06, H07, H13, H27). R04 a R07, R19, R27, R29, R35 e R44 a R47, RNF05 e RNF07."""
+"""Matrícula, lista de espera, mensalidade e saída da turma com o banco SQLite e um relógio de
+teste (H04, H05, H06, H07, H13, H27). R04 a R07, R19, R27 a R29, R35, R37, R44 a R47, R53 a R55,
+RNF05 e RNF07."""
 
 import sqlite3
 from collections.abc import Sequence
@@ -44,9 +45,11 @@ from plataforma.modules.turmas.application.matricula import (
     ConfirmarVaga,
     EntrarNaListaDeEspera,
     Matricular,
+    PagarMensalidade,
     SairDaTurma,
     TurmaDoAluno,
     VerTurmasDoAluno,
+    VerVagasPerdidas,
 )
 from plataforma.modules.turmas.domain.horario import DiaDaSemana
 from plataforma.modules.turmas.domain.lista_de_espera import (
@@ -63,9 +66,14 @@ from plataforma.modules.turmas.domain.matricula import (
     SituacaoNaTurma,
     TurmaCheia,
 )
+from plataforma.modules.turmas.domain.mensalidade import (
+    MensalidadeNaoAberta,
+    SemMensalidade,
+    SituacaoDaMensalidade,
+)
 from plataforma.modules.turmas.domain.turma import ConflitoDeHorario, Turma
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
-from tests.integracao.conftest import RelogioDeTeste
+from tests.integracao.conftest import RelogioDeTeste, pagar_mensalidades
 
 ADM = Usuario(id=1000, email="adm@exemplo.com", perfil=Perfil.ADM)
 SEG, TER, QUA, QUI = (
@@ -97,6 +105,8 @@ class Escola:
     entrar_na_lista: EntrarNaListaDeEspera
     confirmar_vaga: ConfirmarVaga
     sair_da_turma: SairDaTurma
+    pagar_mensalidade: PagarMensalidade
+    ver_vagas_perdidas: VerVagasPerdidas
     niveis: ConsultaDeNiveis
     turmas: RepositorioDeTurmasSqlite
 
@@ -131,13 +141,15 @@ class Escola:
         )
 
     def encher(self, turma: Turma, materia: Materia, quantos: int = 12) -> list[Usuario]:
-        """Matricula na turma alunos do nível dela, até ela ter quantos alunos."""
+        """Matricula na turma alunos do nível dela, até ela ter quantos alunos, com as
+        mensalidades pagas, para eles não perderem a vaga por atraso (R28)."""
         alunos = [
             self.aluno(f"aluno{numero}.turma{turma.id}@exemplo.com", materia, turma.nivel)
             for numero in range(1, quantos + 1)
         ]
         for aluno in alunos:
             self.matricular.executar(aluno, turma.id)
+            pagar_mensalidades(self.conexao, aluno.id, turma.id)
         return alunos
 
     def como_o_aluno_ve(self, aluno: Usuario, turma: Turma) -> TurmaDoAluno:
@@ -179,6 +191,8 @@ def escola(
         entrar_na_lista=EntrarNaListaDeEspera(*do_aluno),
         confirmar_vaga=ConfirmarVaga(*do_aluno),
         sair_da_turma=SairDaTurma(*do_aluno),
+        pagar_mensalidade=PagarMensalidade(*do_aluno),
+        ver_vagas_perdidas=VerVagasPerdidas(*do_aluno),
         niveis=niveis,
         turmas=turmas,
     )
@@ -575,3 +589,163 @@ def test_rnf05_erro_ao_gravar_a_mensalidade_nao_deixa_a_matricula_pela_metade(
         escola.matricular.executar(ana, turma.id)
 
     assert escola.vagas_livres(turma) == 12
+
+
+# H07: a mensalidade seguinte, o pagamento e a perda da vaga por atraso.
+
+
+@pytest.fixture
+def ana_desde_10_03(escola: Escola, fisica: Materia, carlos: Usuario) -> tuple[Usuario, Turma]:
+    """Ana se matriculou em 10/03/2027 numa turma de Física do N2 criada em 09/03, de terça e
+    quinta: a mensalidade de 10/04 fica em aberto desde 10/03."""
+    escola.ir_para(em(9, 3, 2027))
+    turma = escola.turma(fisica, 2, carlos)
+    ana = escola.aluno("ana@exemplo.com", fisica, 2)
+    escola.ir_para(em(10, 3, 2027, 10))
+    escola.matricular.executar(ana, turma.id)
+    return ana, turma
+
+
+def test_r27_matriculada_em_10_03_ana_ve_em_20_03_a_mensalidade_de_r_200_que_vence_em_10_04(
+    escola: Escola, ana_desde_10_03: tuple[Usuario, Turma]
+) -> None:
+    ana, turma = ana_desde_10_03
+    escola.ir_para(em(20, 3, 2027))
+
+    vista = escola.como_o_aluno_ve(ana, turma)
+
+    assert vista.mensalidade_devida is not None
+    assert (vista.mensalidade_devida.vencimento, vista.mensalidade_em_centavos) == (
+        date(2027, 4, 10),
+        20000,
+    )
+    assert vista.situacao_da_mensalidade == SituacaoDaMensalidade.EM_ABERTO
+
+
+def test_r27_r53_ana_paga_em_08_04_a_de_10_04_e_a_de_10_05_so_abre_em_10_04(
+    escola: Escola, ana_desde_10_03: tuple[Usuario, Turma]
+) -> None:
+    ana, turma = ana_desde_10_03
+    escola.ir_para(em(8, 4, 2027))
+
+    paga = escola.pagar_mensalidade.executar(ana, turma.id)
+
+    assert (paga.vencimento, paga.valor_em_centavos, paga.paga_em) == (
+        date(2027, 4, 10),
+        20000,
+        em(8, 4, 2027),
+    )
+    assert paga.proximo_vencimento == date(2027, 5, 10)
+    vista = escola.como_o_aluno_ve(ana, turma)
+    assert vista.proximo_vencimento == date(2027, 5, 10)
+    assert vista.situacao_da_mensalidade == SituacaoDaMensalidade.A_ABRIR
+    with pytest.raises(
+        MensalidadeNaoAberta, match="A mensalidade de 10/05/2027 só pode ser paga a partir de "
+    ):
+        escola.pagar_mensalidade.executar(ana, turma.id)
+
+
+def test_r28_ana_paga_em_17_04_as_23h_continua_na_turma_e_a_proxima_vence_em_10_05(
+    escola: Escola, ana_desde_10_03: tuple[Usuario, Turma]
+) -> None:
+    ana, turma = ana_desde_10_03
+    escola.ir_para(em(17, 4, 2027, 23))
+    assert escola.como_o_aluno_ve(ana, turma).situacao_da_mensalidade == (
+        SituacaoDaMensalidade.ATRASADA
+    )
+
+    escola.pagar_mensalidade.executar(ana, turma.id)
+
+    escola.ir_para(em(18, 4, 2027))
+    vista = escola.como_o_aluno_ve(ana, turma)
+    assert vista.situacao == SituacaoNaTurma.MATRICULADO
+    assert vista.proximo_vencimento == date(2027, 5, 10)
+
+
+def test_r28_r55_sem_pagar_a_de_10_04_ana_perde_a_vaga_em_18_04_e_ve_o_aviso(
+    escola: Escola, ana_desde_10_03: tuple[Usuario, Turma]
+) -> None:
+    ana, turma = ana_desde_10_03
+    escola.ir_para(em(17, 4, 2027, 23, 59))
+    assert escola.como_o_aluno_ve(ana, turma).situacao == SituacaoNaTurma.MATRICULADO
+    assert escola.ver_vagas_perdidas.executar(ana) == []
+
+    escola.ir_para(em(18, 4, 2027, 0))
+
+    assert escola.como_o_aluno_ve(ana, turma).situacao == SituacaoNaTurma.COM_VAGA
+    assert escola.vagas_livres(turma) == 12
+    [perdida] = escola.ver_vagas_perdidas.executar(ana)
+    assert (perdida.turma_id, perdida.nome_da_materia, perdida.perdida_em) == (
+        turma.id,
+        "Física",
+        em(18, 4, 2027, 0),
+    )
+    with pytest.raises(SemMatricula):
+        escola.pagar_mensalidade.executar(ana, turma.id)
+
+
+def test_r55_o_aviso_some_quando_ana_entra_de_novo_numa_turma_de_fisica(
+    escola: Escola, ana_desde_10_03: tuple[Usuario, Turma]
+) -> None:
+    ana, turma = ana_desde_10_03
+    # Na segunda 19/04, a turma deu 12 aulas: a matrícula ainda está aberta (R19).
+    escola.ir_para(em(19, 4, 2027))
+    assert len(escola.ver_vagas_perdidas.executar(ana)) == 1
+
+    escola.matricular.executar(ana, turma.id)
+
+    assert escola.ver_vagas_perdidas.executar(ana) == []
+
+
+def test_r05_r28_a_vaga_que_ana_perde_vai_para_bruno_na_lista_de_espera(
+    escola: Escola, fisica: Materia, ana_desde_10_03: tuple[Usuario, Turma]
+) -> None:
+    _, turma = ana_desde_10_03
+    escola.encher(turma, fisica, quantos=11)
+    bruno = escola.aluno("bruno@exemplo.com", fisica, 2)
+    escola.entrar_na_lista.executar(bruno, turma.id)
+
+    escola.ir_para(em(18, 4, 2027, 1))
+
+    vista = escola.como_o_aluno_ve(bruno, turma)
+    assert vista.situacao == SituacaoNaTurma.VAGA_OFERECIDA
+    assert vista.prazo_para_confirmar == em(21, 4, 2027, 0)
+
+
+def test_r54_depois_que_a_turma_encerra_nenhuma_mensalidade_vence_e_ana_continua_nela(
+    escola: Escola, fisica: Materia, carlos: Usuario
+) -> None:
+    # A turma do N3, o nível máximo, criada em 16/12/2026, encerra em 09/03/2027 às 20h30. Ana
+    # pagou as mensalidades de 16/01 e 16/02 e espera a nota da prova final (R23).
+    escola.ir_para(em(16, 12, 2026))
+    turma = escola.turma(fisica, 3, carlos)
+    ana = escola.aluno("ana@exemplo.com", fisica, 3)
+    escola.matricular.executar(ana, turma.id)
+    pagar_mensalidades(escola.conexao, ana.id, turma.id, quantas=2)
+
+    escola.ir_para(em(25, 3, 2027))
+
+    vista = escola.como_o_aluno_ve(ana, turma)
+    assert vista.situacao == SituacaoNaTurma.MATRICULADO
+    assert vista.situacao_da_mensalidade == SituacaoDaMensalidade.SEM_MENSALIDADE
+    with pytest.raises(SemMensalidade, match="A turma encerrou: não há mensalidade a pagar."):
+        escola.pagar_mensalidade.executar(ana, turma.id)
+
+
+def test_rnf07_so_o_aluno_paga_a_mensalidade(
+    escola: Escola, carlos: Usuario, ana_desde_10_03: tuple[Usuario, Turma]
+) -> None:
+    _, turma = ana_desde_10_03
+
+    with pytest.raises(AcessoNegado, match="Só o aluno pode pagar a mensalidade."):
+        escola.pagar_mensalidade.executar(carlos, turma.id)
+
+
+def test_quem_nao_tem_matricula_nao_paga_mensalidade(
+    escola: Escola, fisica: Materia, ana_desde_10_03: tuple[Usuario, Turma]
+) -> None:
+    _, turma = ana_desde_10_03
+    bruno = escola.aluno("bruno@exemplo.com", fisica, 2)
+
+    with pytest.raises(SemMatricula, match="Você não tem matrícula nesta turma."):
+        escola.pagar_mensalidade.executar(bruno, turma.id)

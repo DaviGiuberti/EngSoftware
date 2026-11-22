@@ -1,6 +1,6 @@
 """Turmas no SQLite: a tabela turma da migração 0007; da 0008, as matrículas, as mensalidades
-pagas e as listas de espera; da 0009, as aulas não realizadas e as presenças; e da 0010, as
-etapas, o encerramento, as provas finais e as correções.
+pagas e as listas de espera; da 0009, as aulas não realizadas e as presenças; da 0010, as
+etapas, o encerramento, as provas finais e as correções; e da 0012, o motivo da saída.
 
 Todo SQL usa parâmetros (RNF08). Datas e horas vão como texto ISO 8601, com o fuso.
 """
@@ -13,7 +13,7 @@ from typing import Any
 from plataforma.modules.turmas.domain.etapa import Etapa
 from plataforma.modules.turmas.domain.horario import DiaDaSemana, Horario
 from plataforma.modules.turmas.domain.lista_de_espera import ListaDeEspera, NaLista
-from plataforma.modules.turmas.domain.matricula import Matricula
+from plataforma.modules.turmas.domain.matricula import Matricula, MotivoDaSaida
 from plataforma.modules.turmas.domain.mensalidade import Mensalidade
 from plataforma.modules.turmas.domain.presenca import Presenca
 from plataforma.modules.turmas.domain.prova_final import Nota, ProvaFinal, ResultadoEtapa
@@ -27,7 +27,7 @@ from plataforma.modules.turmas.domain.turma import (
 
 # Cada filtro NULL deixa passar todas as matrículas. Com so_ativas 0, vêm também as de quem saiu.
 _MATRICULAS = (
-    "SELECT id, turma_id, aluno_id, matriculada_em, saiu_em FROM matricula "
+    "SELECT id, turma_id, aluno_id, matriculada_em, saiu_em, saiu_por FROM matricula "
     "WHERE (:so_ativas = 0 OR saiu_em IS NULL) "
     "AND (:turma_id IS NULL OR turma_id = :turma_id) "
     "AND (:aluno_id IS NULL OR aluno_id = :aluno_id) "
@@ -146,6 +146,18 @@ class RepositorioDeTurmasSqlite:
         )
         return Matricula(matricula_id, turma_id, aluno_id, matriculada_em)
 
+    def pagar_mensalidade(self, matricula_id: int, paga: Mensalidade) -> None:
+        self._conexao.execute(
+            "INSERT INTO mensalidade (matricula_id, vencimento, valor_em_centavos, paga_em) "
+            "VALUES (?, ?, ?, ?)",
+            (
+                matricula_id,
+                paga.vencimento.isoformat(),
+                paga.valor_em_centavos,
+                paga.paga_em.isoformat(),
+            ),
+        )
+
     def matriculas_da_turma(self, turma_id: int) -> list[Matricula]:
         return self._matriculas(turma_id=turma_id)
 
@@ -155,9 +167,15 @@ class RepositorioDeTurmasSqlite:
     def matriculas_do_aluno(self, aluno_id: int) -> list[Matricula]:
         return self._matriculas(aluno_id=aluno_id)
 
-    def encerrar_matricula(self, matricula_id: int, saiu_em: datetime) -> None:
+    def todas_as_matriculas_do_aluno(self, aluno_id: int) -> list[Matricula]:
+        return self._matriculas(aluno_id=aluno_id, so_ativas=False)
+
+    def encerrar_matricula(
+        self, matricula_id: int, saiu_em: datetime, saiu_por: MotivoDaSaida
+    ) -> None:
         self._conexao.execute(
-            "UPDATE matricula SET saiu_em = ? WHERE id = ?", (saiu_em.isoformat(), matricula_id)
+            "UPDATE matricula SET saiu_em = ?, saiu_por = ? WHERE id = ?",
+            (saiu_em.isoformat(), saiu_por.value, matricula_id),
         )
 
     def mensalidades(self, matricula_id: int) -> list[Mensalidade]:
@@ -368,8 +386,9 @@ class RepositorioDeTurmasSqlite:
                 id_do_aluno,
                 datetime.fromisoformat(matriculada_em),
                 _data_e_hora(saiu_em),
+                None if saiu_por is None else MotivoDaSaida(saiu_por),
             )
-            for matricula_id, id_da_turma, id_do_aluno, matriculada_em, saiu_em in linhas
+            for matricula_id, id_da_turma, id_do_aluno, matriculada_em, saiu_em, saiu_por in linhas
         ]
 
     def _ler(self, turma_id: int | None = None, professor_id: int | None = None) -> list[Turma]:

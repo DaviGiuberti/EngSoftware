@@ -80,8 +80,10 @@ from plataforma.modules.turmas.application.matricula import (
     ConfirmarVaga,
     EntrarNaListaDeEspera,
     Matricular,
+    PagarMensalidade,
     SairDaTurma,
     VerTurmasDoAluno,
+    VerVagasPerdidas,
 )
 from plataforma.modules.turmas.application.presenca import (
     CasosDeUsoDasAulas,
@@ -209,6 +211,8 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
             entrar_na_lista=EntrarNaListaDeEspera(*do_aluno_nas_turmas),
             confirmar_vaga=ConfirmarVaga(*do_aluno_nas_turmas),
             sair_da_turma=SairDaTurma(*do_aluno_nas_turmas),
+            pagar_mensalidade=PagarMensalidade(*do_aluno_nas_turmas),
+            ver_vagas_perdidas=VerVagasPerdidas(*do_aluno_nas_turmas),
         ),
         aulas=CasosDeUsoDasAulas(
             ver_aulas=VerAulasDaTurma(*das_aulas),

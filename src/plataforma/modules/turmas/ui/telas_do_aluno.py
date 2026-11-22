@@ -1,8 +1,10 @@
-"""Aba Turmas do aluno (H04, H05, H06, H13, H08): as turmas do nível dele, com a matrícula, a
-lista de espera, o aviso da vaga oferecida, a saída da turma e, nas turmas em que ele está, a
-aula da etapa, as faltas e a prova final da última etapa que terminou."""
+"""Aba Turmas do aluno (H04, H05, H06, H13, H08, H07): as turmas do nível dele, com a matrícula,
+a lista de espera, o aviso da vaga oferecida, a saída da turma e, nas turmas em que ele está, a
+mensalidade em aberto, a aula da etapa, as faltas e a prova final da última etapa que terminou.
+Quem perdeu a vaga por atraso da mensalidade vê o aviso (R55)."""
 
 from collections.abc import Callable
+from datetime import timedelta
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
@@ -25,11 +27,14 @@ from plataforma.modules.turmas.application.em_dia import SituacaoNaProvaFinal
 from plataforma.modules.turmas.application.matricula import (
     CasosDeUsoDaMatricula,
     MatriculaFeita,
+    MensalidadePaga,
     TurmaDoAluno,
+    VagaPerdida,
 )
 from plataforma.modules.turmas.domain.etapa import AULAS_POR_ETAPA
 from plataforma.modules.turmas.domain.horario import descrever_horario, formatar_data_e_hora
 from plataforma.modules.turmas.domain.matricula import SituacaoNaTurma
+from plataforma.modules.turmas.domain.mensalidade import SituacaoDaMensalidade
 from plataforma.modules.turmas.domain.presenca import LIMITE_DE_FALTAS, passou_do_limite
 from plataforma.modules.turmas.domain.prova_final import ResultadoEtapa
 from plataforma.modules.turmas.ui.comum import descrever_etapa, nome_da_turma
@@ -105,6 +110,44 @@ def descrever_prova_final(situacao: SituacaoNaProvaFinal | None) -> str:
     return f"{texto}."
 
 
+def descrever_mensalidade(vista: TurmaDoAluno) -> list[str]:
+    """H07: o valor, o vencimento e a situação da mensalidade seguinte às pagas (R28, R53, R54)."""
+    devida, situacao = vista.mensalidade_devida, vista.situacao_da_mensalidade
+    if devida is None or situacao is None or situacao == SituacaoDaMensalidade.SEM_MENSALIDADE:
+        return ["—", "—", "sem mensalidade: a turma encerrou"]
+    valor = formatar_reais(vista.mensalidade_em_centavos)
+    vencimento = f"{devida.vencimento:%d/%m/%Y}"
+    match situacao:
+        case SituacaoDaMensalidade.A_ABRIR:
+            return [valor, vencimento, f"paga: a próxima abre em {devida.abre_em:%d/%m/%Y}"]
+        case SituacaoDaMensalidade.ATRASADA:
+            # R37: a tolerância vai até as 23h59 do dia anterior ao da perda da vaga.
+            ultimo_dia = devida.perde_a_vaga_em - timedelta(days=1)
+            return [
+                valor,
+                vencimento,
+                f"atrasada: pague até {ultimo_dia:%d/%m/%Y}, às 23h59, para não perder a vaga",
+            ]
+        case _:
+            return [valor, vencimento, "em aberto"]
+
+
+def avisar_vaga_perdida(vaga: VagaPerdida) -> str:
+    """R55: o aviso de quem perdeu a vaga por atraso da mensalidade."""
+    return (
+        f"Você perdeu a vaga na turma de {vaga.nome_da_materia}, "
+        f"{descrever_horario(vaga.horario)}, em {vaga.perdida_em:%d/%m/%Y}, por atraso da "
+        "mensalidade."
+    )
+
+
+def _mensalidade_paga(paga: MensalidadePaga) -> str:
+    return (
+        f"Mensalidade de {paga.vencimento:%d/%m/%Y} paga: {formatar_reais(paga.valor_em_centavos)}"
+        f". A próxima vence em {paga.proximo_vencimento:%d/%m/%Y}."
+    )
+
+
 def _pagamento(feita: MatriculaFeita) -> str:
     return (
         f"Você pagou {formatar_reais(feita.valor_pago_em_centavos)}, e a próxima mensalidade "
@@ -121,7 +164,9 @@ class TelaTurmasDoAluno(QWidget):
         self._usuario = usuario
         self._casos_de_uso = casos_de_uso
         self.botoes: dict[int, QPushButton] = {}
+        self.botoes_de_pagamento: dict[int, QPushButton] = {}
         self.vagas_oferecidas = 0
+        self._vagas_perdidas: list[VagaPerdida] = []
 
         self.avisos = QLabel()
         self.avisos.setWordWrap(True)
@@ -154,12 +199,33 @@ class TelaTurmasDoAluno(QWidget):
         self._grupo_das_etapas = QGroupBox("Minhas etapas")
         QVBoxLayout(self._grupo_das_etapas).addWidget(self.etapas)
         self._grupo_das_etapas.hide()
+        self.mensalidades = QTableWidget(0, 5)
+        self.mensalidades.setHorizontalHeaderLabels(
+            ["Turma", "Valor", "Vencimento", "Situação", ""]
+        )
+        self.mensalidades.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.mensalidades.verticalHeader().setVisible(False)
+        self.mensalidades.setMaximumHeight(140)
+        cabecalho_das_mensalidades = self.mensalidades.horizontalHeader()
+        cabecalho_das_mensalidades.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        cabecalho_das_mensalidades.setStretchLastSection(True)
+        explicacao_das_mensalidades = QLabel(
+            "A mensalidade seguinte pode ser paga desde o vencimento da anterior. Atrasada, você "
+            "tem 7 dias de tolerância; depois disso, perde a vaga."
+        )
+        explicacao_das_mensalidades.setWordWrap(True)
+        self.grupo_das_mensalidades = QGroupBox("Mensalidades")
+        coluna_das_mensalidades = QVBoxLayout(self.grupo_das_mensalidades)
+        coluna_das_mensalidades.addWidget(explicacao_das_mensalidades)
+        coluna_das_mensalidades.addWidget(self.mensalidades)
+        self.grupo_das_mensalidades.hide()
 
         coluna = QVBoxLayout(self)
         coluna.addWidget(titulo("Turmas"))
         coluna.addWidget(self.avisos)
         coluna.addWidget(explicacao)
         coluna.addWidget(self.tabela, 1)
+        coluna.addWidget(self.grupo_das_mensalidades)
         coluna.addWidget(self._grupo_das_etapas)
         coluna.addWidget(self.mensagem)
         self.recarregar()
@@ -167,6 +233,12 @@ class TelaTurmasDoAluno(QWidget):
     def recarregar(self) -> None:
         """Lê de novo as turmas, como depois de o aluno fazer o nivelamento."""
         self.mensagem.clear()
+        perdidas = executar(
+            "ver as vagas perdidas",
+            self._usuario.email,
+            lambda: self._casos_de_uso.ver_vagas_perdidas.executar(self._usuario),
+        )
+        self._vagas_perdidas = perdidas.valor if isinstance(perdidas, Feito) else []
         resultado = executar(
             "ver turmas do seu nível",
             self._usuario.email,
@@ -203,14 +275,43 @@ class TelaTurmasDoAluno(QWidget):
                 botao.clicked.connect(fazer)
                 self.tabela.setCellWidget(linha, 5, botao)
                 self.botoes[resumo.id] = botao
-        avisos = [aviso for vista in vistas if (aviso := avisar_vaga(vista)) is not None]
+        ofertas = [aviso for vista in vistas if (aviso := avisar_vaga(vista)) is not None]
+        avisos = ofertas + [avisar_vaga_perdida(vaga) for vaga in self._vagas_perdidas]
         self.avisos.setText("\n".join(avisos))
         self.avisos.setVisible(bool(avisos))
-        self.vagas_oferecidas = len(avisos)
+        self.vagas_oferecidas = len(ofertas)
         self.avisos_mudaram.emit(self.vagas_oferecidas)
+        self._preencher_mensalidades(vistas)
         self._preencher_etapas(vistas)
         if not vistas:
             mostrar_aviso(self.mensagem, SEM_TURMAS)
+
+    def _preencher_mensalidades(self, vistas: list[TurmaDoAluno]) -> None:
+        """H07: em cada turma em que o aluno está, a mensalidade seguinte e o botão de pagá-la
+        quando ela está em aberto ou atrasada (R28, R53)."""
+        minhas = [vista for vista in vistas if vista.situacao == SituacaoNaTurma.MATRICULADO]
+        # Zerar as linhas também apaga os botões que estavam nelas.
+        self.mensalidades.setRowCount(0)
+        self.mensalidades.setRowCount(len(minhas))
+        self.botoes_de_pagamento = {}
+        a_pagar = (SituacaoDaMensalidade.EM_ABERTO, SituacaoDaMensalidade.ATRASADA)
+        for linha, vista in enumerate(minhas):
+            valores = [nome_da_turma(vista.resumo), *descrever_mensalidade(vista), ""]
+            for coluna, valor in enumerate(valores):
+                self.mensalidades.setItem(linha, coluna, QTableWidgetItem(valor))
+            if vista.situacao_da_mensalidade in a_pagar:
+                botao = QPushButton(f"Pagar {formatar_reais(vista.mensalidade_em_centavos)}")
+                botao.clicked.connect(self._pagar_em(vista))
+                self.mensalidades.setCellWidget(linha, 4, botao)
+                self.botoes_de_pagamento[vista.resumo.id] = botao
+        self.grupo_das_mensalidades.setVisible(bool(minhas))
+
+    def _pagar_em(self, vista: TurmaDoAluno) -> Callable[[], None]:
+        return lambda: self._fazer(
+            "pagar a mensalidade",
+            lambda: self._casos_de_uso.pagar_mensalidade.executar(self._usuario, vista.resumo.id),
+            _mensalidade_paga,
+        )
 
     def _preencher_etapas(self, vistas: list[TurmaDoAluno]) -> None:
         """H08: em cada turma em que o aluno está, a aula da etapa, as faltas dele (R08) e a

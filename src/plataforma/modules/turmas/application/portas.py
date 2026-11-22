@@ -6,7 +6,7 @@ from typing import Protocol
 
 from plataforma.modules.turmas.domain.etapa import Etapa
 from plataforma.modules.turmas.domain.lista_de_espera import ListaDeEspera
-from plataforma.modules.turmas.domain.matricula import Matricula
+from plataforma.modules.turmas.domain.matricula import Matricula, MotivoDaSaida
 from plataforma.modules.turmas.domain.mensalidade import Mensalidade
 from plataforma.modules.turmas.domain.presenca import Presenca
 from plataforma.modules.turmas.domain.prova_final import Nota, ProvaFinal, ResultadoEtapa
@@ -65,10 +65,20 @@ class RepositorioDeTurmas(Protocol):
         """As matrículas ativas do aluno, na ordem em que foram feitas."""
         ...
 
-    def encerrar_matricula(self, matricula_id: int, saiu_em: datetime) -> None: ...
+    def todas_as_matriculas_do_aluno(self, aluno_id: int) -> list[Matricula]:
+        """As matrículas do aluno, também as que terminaram, na ordem em que foram feitas."""
+        ...
+
+    def encerrar_matricula(
+        self, matricula_id: int, saiu_em: datetime, saiu_por: MotivoDaSaida
+    ) -> None: ...
 
     def mensalidades(self, matricula_id: int) -> list[Mensalidade]:
         """As mensalidades pagas da matrícula, da mais antiga à mais nova."""
+        ...
+
+    def pagar_mensalidade(self, matricula_id: int, paga: Mensalidade) -> None:
+        """Grava a mensalidade paga (R27). O pagamento é simulado (ADR 0003)."""
         ...
 
     def lista_de_espera(self, turma_id: int) -> ListaDeEspera:
