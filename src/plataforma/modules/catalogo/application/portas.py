@@ -3,7 +3,11 @@
 from datetime import datetime
 from typing import Protocol
 
-from plataforma.modules.catalogo.domain.aulas_do_aluno import AcessoAoPacote, AulaConcluida
+from plataforma.modules.catalogo.domain.aulas_do_aluno import (
+    AcessoAoPacote,
+    AulaConcluida,
+    AulaConcluidaNaMateria,
+)
 from plataforma.modules.catalogo.domain.pacote import Pacote, PacoteNovo
 
 
@@ -40,6 +44,11 @@ class RepositorioDeAulasConcluidas(Protocol):
         ...
 
     def adicionar(self, aluno_id: int, concluida: AulaConcluida) -> None: ...
+
+    def de_todos(self) -> list[AulaConcluidaNaMateria]:
+        """As aulas concluídas de todos os alunos, com a matéria e o nível do pacote, em ordem de
+        data."""
+        ...
 
     def apagar(self, aluno_id: int, pacote_id: int) -> None:
         """Apaga as aulas que o aluno concluiu no pacote, no reembolso (R63)."""

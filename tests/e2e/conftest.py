@@ -4,6 +4,7 @@ import os
 import sqlite3
 from collections.abc import Iterator, Sequence
 from contextlib import closing, contextmanager
+from dataclasses import replace
 from datetime import date, datetime, time, timedelta
 from functools import partial
 from pathlib import Path
@@ -33,6 +34,7 @@ from plataforma.modules.catalogo.application.casos_de_uso import (
     ConsultaDePacotes,
     montar_casos_de_uso,
 )
+from plataforma.modules.catalogo.domain.aulas_do_aluno import AulaConcluida
 from plataforma.modules.catalogo.domain.pacote import EstadoPacote
 from plataforma.modules.catalogo.infra.repositorio_de_aulas_concluidas import (
     RepositorioDeAulasConcluidasSqlite,
@@ -64,7 +66,8 @@ from plataforma.modules.materias.infra.repositorio_de_materias import (
 from plataforma.modules.nivelamento.application.casos_de_uso import CadastrarQuestao
 from plataforma.modules.nivelamento.application.consulta_de_niveis import ConsultaDeNiveis
 from plataforma.modules.nivelamento.application.promocao import Promocoes
-from plataforma.modules.nivelamento.domain.nivelamento import NivelDoAluno
+from plataforma.modules.nivelamento.domain.nivelamento import Conclusao, NivelDoAluno
+from plataforma.modules.nivelamento.domain.promocao import Promocao
 from plataforma.modules.nivelamento.infra.repositorio_de_nivelamentos import (
     RepositorioDeNivelamentosSqlite,
 )
@@ -371,6 +374,35 @@ class App:
             ConsultaDeProfessores(RepositorioDeProfessoresSqlite(conexao)),
             em_transacao,
         )
+
+    def preparar_nivelamento(self, email: str, materia: str, nivel: int) -> None:
+        """Grava, antes de abrir o app, o nivelamento do aluno concluído agora no relógio do app,
+        com o nível que ele deu, para as métricas (R64)."""
+        with self._no_banco() as (conexao, _, _):
+            aluno = ConsultaDeAlunos(RepositorioDeUsuariosSqlite(conexao)).obter_por_email(email)
+            materias = ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao))
+            materia_id = next(m.id for m in materias.listar() if m.nome == materia)
+            nivelamentos = RepositorioDeNivelamentosSqlite(conexao)
+            agora = self.relogio.agora()
+            feito = nivelamentos.criar(aluno.id, materia_id, agora - timedelta(minutes=30))
+            nivelamentos.salvar(replace(feito, conclusao=Conclusao(agora, 50, nivel)))
+            nivelamentos.salvar_nivel(aluno.id, NivelDoAluno(materia_id, nivel))
+
+    def preparar_promocao(self, aluno: Usuario, materia: str) -> None:
+        """Grava, antes de abrir o app, a promoção do aluno do N2 para o N3, agora no relógio."""
+        with self._no_banco() as (conexao, _, _):
+            materias = ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao))
+            materia_id = next(m.id for m in materias.listar() if m.nome == materia)
+            RepositorioDeNivelamentosSqlite(conexao).adicionar_promocao(
+                aluno.id, Promocao(materia_id, 2, 3, self.relogio.agora())
+            )
+
+    def preparar_aula_concluida(self, aluno: Usuario, pacote_id: int, numero: int = 1) -> None:
+        """Grava, antes de abrir o app, a aula do pacote concluída agora no relógio do app."""
+        with self._no_banco() as (conexao, _, _):
+            RepositorioDeAulasConcluidasSqlite(conexao).adicionar(
+                aluno.id, AulaConcluida(pacote_id, numero, self.relogio.agora())
+            )
 
     def preparar_mensalidades(self, aluno: Usuario, turma_id: int, quantas: int = 12) -> None:
         """Grava, antes de abrir o app, as próximas mensalidades do aluno como pagas em dia, para

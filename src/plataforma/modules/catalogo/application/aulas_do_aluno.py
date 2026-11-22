@@ -23,6 +23,7 @@ from plataforma.modules.catalogo.application.portas import (
 from plataforma.modules.catalogo.domain.aulas_do_aluno import (
     AcessoAoPacote,
     AulaConcluida,
+    AulaConcluidaNaMateria,
     concluir_aula,
     exigir_acesso,
     progresso,
@@ -165,6 +166,17 @@ class ConcluirAula(_CasoDoAluno):
             )
             self._concluidas.adicionar(aluno.id, concluida)
             return concluida
+
+
+class ConsultaDeAulasConcluidas:
+    """As métricas leem as aulas concluídas sem ler as tabelas do catalogo (ADR 0002)."""
+
+    def __init__(self, concluidas: RepositorioDeAulasConcluidas) -> None:
+        self._concluidas = concluidas
+
+    def de_todos(self) -> list[AulaConcluidaNaMateria]:
+        """As aulas concluídas de todos os alunos, com a matéria e o nível do pacote (R64)."""
+        return self._concluidas.de_todos()
 
 
 class ApagarAulasConcluidas:

@@ -19,6 +19,7 @@ from plataforma.janela_principal import CasosDeUso, JanelaPrincipal
 from plataforma.log import configurar_log, fechar_log
 from plataforma.modules.catalogo.application.aulas_do_aluno import (
     ApagarAulasConcluidas,
+    ConsultaDeAulasConcluidas,
     montar_casos_de_uso_do_aluno,
 )
 from plataforma.modules.catalogo.application.casos_de_uso import (
@@ -53,6 +54,7 @@ from plataforma.modules.materias.application.casos_de_uso import (
 from plataforma.modules.materias.infra.repositorio_de_materias import (
     RepositorioDeMateriasSqlite,
 )
+from plataforma.modules.metricas.application.casos_de_uso import VerMetricas
 from plataforma.modules.nivelamento.application.casos_de_uso import (
     CadastrarQuestao,
     CasosDeUsoDoNivelamento,
@@ -70,6 +72,7 @@ from plataforma.modules.nivelamento.application.fazer_nivelamento import (
     ResponderQuestao,
     VerMeusNiveis,
 )
+from plataforma.modules.nivelamento.application.historico import HistoricoDoNivelamento
 from plataforma.modules.nivelamento.application.promocao import Promocoes
 from plataforma.modules.nivelamento.infra.repositorio_de_nivelamentos import (
     RepositorioDeNivelamentosSqlite,
@@ -86,6 +89,7 @@ from plataforma.modules.turmas.application.casos_de_uso import (
     VerMinhasTurmas,
     VerTurmas,
 )
+from plataforma.modules.turmas.application.consulta_de_presencas import ConsultaDePresencas
 from plataforma.modules.turmas.application.em_dia import AtualizarTurmas, TurmasEmDia
 from plataforma.modules.turmas.application.matricula import (
     CasosDeUsoDaMatricula,
@@ -266,6 +270,13 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
             ApagarAulasConcluidas(concluidas),
             relogio,
             em_transacao,
+        ),
+        # As métricas só leem as consultas públicas dos outros módulos (ADR 0002).
+        metricas=VerMetricas(
+            HistoricoDoNivelamento(nivelamentos),
+            ConsultaDePresencas(turmas),
+            ConsultaDeAulasConcluidas(concluidas),
+            relogio,
         ),
     )
 

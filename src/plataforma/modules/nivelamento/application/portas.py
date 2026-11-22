@@ -3,8 +3,12 @@
 from datetime import datetime
 from typing import Protocol
 
-from plataforma.modules.nivelamento.domain.nivelamento import Nivelamento, NivelDoAluno
-from plataforma.modules.nivelamento.domain.promocao import Promocao
+from plataforma.modules.nivelamento.domain.nivelamento import (
+    Nivelamento,
+    NivelamentoNoHistorico,
+    NivelDoAluno,
+)
+from plataforma.modules.nivelamento.domain.promocao import Promocao, PromocaoDoAluno
 from plataforma.modules.nivelamento.domain.questao import Questao, QuestaoNova
 
 
@@ -47,6 +51,14 @@ class RepositorioDeNivelamentos(Protocol):
 
     def concluir_trilha(self, aluno_id: int, materia_id: int, em: datetime) -> None:
         """Guarda a trilha concluída (R09). Se o aluno já a concluiu antes, nada muda."""
+        ...
+
+    def concluidos_de_todos(self) -> list[NivelamentoNoHistorico]:
+        """Os nivelamentos concluídos de todos os alunos, também os refeitos, em ordem de data."""
+        ...
+
+    def promocoes_de_todos(self) -> list[PromocaoDoAluno]:
+        """As promoções de todos os alunos, em ordem de data."""
         ...
 
     def trilhas_concluidas(self, aluno_id: int) -> dict[int, datetime]:

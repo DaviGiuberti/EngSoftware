@@ -45,6 +45,17 @@ class Presenca:
     presente: bool
 
 
+@dataclass(frozen=True)
+class PresencaNaMateria:
+    """Uma presença (não uma falta) do aluno numa aula de turma, com a matéria e o nível da etapa.
+    É uma atividade de estudo para as métricas (R64)."""
+
+    aluno_id: int
+    materia_id: int
+    nivel: int
+    data_da_aula: date
+
+
 def _numero_da_aula_realizada(aula: AulaDaEtapa) -> int:
     """R18: a aula não realizada não tem número e não recebe presença."""
     if aula.numero is None:
