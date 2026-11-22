@@ -48,8 +48,9 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Aula | Encontro ao vivo da turma, no horário dela, pelo link do Google Meet. Numerada de 1 a 24 dentro da etapa. | `Aula` |
 | Aula dada | Aula que já começou e não foi marcada como não realizada. É a que conta nas 24 da etapa e no limite da matrícula, até antes da 13ª aula (R19, R43). | `aulas_dadas` |
 | Aula não realizada | Aula que não aconteceu (feriado, professor doente). Não conta nas 24 e é reposta no fim da etapa, no mesmo horário (R18). | `nao_realizada` (situação da `Aula`) |
-| Matrícula | Vínculo do aluno com uma turma. Começa com o pagamento da primeira mensalidade, só antes da 13ª aula da etapa, e guarda a aula de entrada, a partir da qual as faltas contam (R08, R19, R27). | `Matricula` |
-| Lista de espera | Lista, em ordem de entrada, dos alunos que esperam vaga numa turma cheia. Quando abre vaga, o 1º tem 72 horas para confirmar (R05). | `ListaDeEspera` |
+| Matrícula | Vínculo do aluno com uma turma. Começa com o pagamento da primeira mensalidade, só antes da 13ª aula da etapa, e guarda a aula de entrada, a partir da qual as faltas contam. O aluno tem no máximo uma por matéria (R08, R19, R27, R44). | `Matricula` (`aula_de_entrada`) |
+| Lista de espera | Lista, em ordem de entrada, dos alunos que esperam vaga numa turma cheia. Quando abre vaga, o 1º tem 72 horas para confirmar. O aluno pode estar na lista de várias turmas de uma matéria em que ainda não tem turma (R05, R44). | `ListaDeEspera` |
+| Oferta de vaga | Vaga que abriu numa turma com lista de espera e foi oferecida ao 1º da lista sem oferta. Ele tem 72 horas para confirmar, e enquanto isso a vaga fica reservada. Confirmar é se matricular; quem não confirma sai da lista. A partir da 13ª aula da etapa, a vaga não é oferecida (R05, R35, R45, R47). | `Oferta` (`prazo`) |
 | Presença | Registro, por aula e por aluno, de que ele esteve presente ou ausente. Lançado pelo professor da turma ou pelo ADM (R10). | `Presenca` |
 | Falta | Presença marcada como ausente. Só conta a partir da entrada do aluno na turma; o limite é de 6 por etapa (R08). | `Presenca` com `presente=False` |
 | Prova final | Prova do fim da etapa, aplicada pelo professor fora da plataforma. O professor lança a nota (R20). | `ProvaFinal` |
@@ -68,7 +69,7 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Termo | Significado | Nome no código |
 |---|---|---|
 | Mensalidade | Valor mensal da turma, definido por matéria. A primeira é paga na matrícula, e as seguintes vencem todo mês no dia da matrícula (R27). | `Mensalidade` |
-| Vencimento | Data em que uma mensalidade deve ser paga. | `vencimento` |
+| Vencimento | Data em que uma mensalidade deve ser paga. No mês que não tem o dia da matrícula, é o último dia dele (R46). | `vencimento` |
 | Tolerância | Os 7 dias depois do vencimento em que o aluno com mensalidade atrasada ainda mantém a vaga (R28). | `tolerancia` |
 | Pagamento | Pagamento simulado de uma mensalidade ou de uma compra. Não há gateway no MVP. | `Pagamento` |
 

@@ -130,7 +130,7 @@ Cenário: R19 — matrícula depois da 13ª aula
 
 ### H05 · Entrar na lista de espera
 
-Como aluno, quero entrar na lista de espera de uma turma cheia para conseguir uma vaga quando alguém sair. Prioridade: Média. Regras: R04, R05, R06.
+Como aluno, quero entrar na lista de espera de uma turma cheia para conseguir uma vaga quando alguém sair. Prioridade: Média. Regras: R04, R05, R06, R44.
 
 ```gherkin
 Cenário: R04 — turma cheia recusa matrícula
@@ -152,11 +152,17 @@ Cenário: R05 — turma com vaga não tem lista de espera
   Dada uma turma de Física do N2 com 11 alunos
   Quando um aluno no N2 de Física tenta entrar na lista de espera
   Então o sistema recusa e oferece a matrícula
+
+Cenário: R44 — lista de espera em mais de uma turma da matéria
+  Dada Ana, sem turma de Física, na lista de espera de duas turmas cheias de Física do N2
+  Quando abre uma vaga numa delas e Ana a confirma
+  Então ela fica matriculada nessa turma
+  E sai da lista de espera da outra
 ```
 
 ### H06 · Confirmar a vaga da lista de espera
 
-Como aluno na lista de espera, quero ser avisado na plataforma quando abrir uma vaga e confirmá-la em até 72 horas para não perder a minha vez. Prioridade: Média. Regras: R05, R35.
+Como aluno na lista de espera, quero ser avisado na plataforma quando abrir uma vaga e confirmá-la em até 72 horas para não perder a minha vez. Prioridade: Média. Regras: R05, R35, R45, R47.
 
 ```gherkin
 Cenário: R05 — abre vaga e o 1º da lista é avisado
@@ -169,10 +175,10 @@ Cenário: R05 — a vaga fica reservada durante o prazo
   Quando outro aluno tenta se matricular na turma em 11/03
   Então o sistema recusa a matrícula, porque a vaga está reservada
 
-Cenário: R05 — confirmação dentro do prazo
+Cenário: R05 e R47 — confirmação dentro do prazo
   Dado que Ana pode confirmar uma vaga até 13/03 às 14h
   Quando ela confirma em 13/03 às 13h59
-  Então ela fica matriculada na turma
+  Então ela fica matriculada na turma, com a primeira mensalidade paga
   E sai da lista de espera
 
 Cenário: R05 — o prazo vence e a vaga passa para o próximo
@@ -180,17 +186,27 @@ Cenário: R05 — o prazo vence e a vaga passa para o próximo
   Quando o prazo termina
   Então Bruno recebe o aviso para confirmar a vaga até 16/03 às 14h
   E Ana sai da lista de espera
+
+Cenário: R45 — a vaga que abre a partir da 13ª aula não é oferecida
+  Dada uma turma cheia de Física do N2 que já deu 13 aulas da etapa, com Ana em 1º na lista de espera
+  Quando um aluno sai da turma
+  Então Ana não recebe aviso de vaga
 ```
 
 ### H07 · Pagar a mensalidade
 
-Como aluno, quero pagar a mensalidade da turma e ver quando vence a próxima para não perder a vaga por atraso. Prioridade: Média. Regras: R27, R28, R37.
+Como aluno, quero pagar a mensalidade da turma e ver quando vence a próxima para não perder a vaga por atraso. Prioridade: Média. Regras: R27, R28, R37, R46.
 
 ```gherkin
 Cenário: R27 — vencimento no dia da matrícula
   Dado um aluno que se matriculou em 10/03 numa turma de Física
   Quando ele abre a turma em 20/03
   Então ele vê a próxima mensalidade, de R$ 200, com vencimento em 10/04
+
+Cenário: R46 — vencimento no último dia do mês
+  Dado um aluno que se matriculou em 31/01 numa turma de Física
+  Quando ele abre a turma em 10/02
+  Então ele vê a próxima mensalidade com vencimento em 28/02
 
 Cenário: R27 — pagamento em dia
   Dada a mensalidade de 10/04 em aberto
@@ -1040,3 +1056,7 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R41 | H28 |
 | R42 | H33 |
 | R43 | H30 |
+| R44 | H05 |
+| R45 | H06 |
+| R46 | H07 |
+| R47 | H06 |

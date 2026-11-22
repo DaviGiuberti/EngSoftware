@@ -61,8 +61,17 @@ Turma cheia: o aluno entra numa lista de espera. Quando abre uma vaga, o primeir
 R35
 Quem não confirma a vaga dentro das 72 horas sai da lista de espera. (H06)
 
+R47
+Confirmar a vaga da lista de espera é se matricular: o aluno paga a primeira mensalidade (R27), e valem as mesmas regras da matrícula (R06, R07, R19, R44). (H06)
+
+R45
+A partir da 13ª aula da etapa, a lista de espera da turma não recebe ninguém novo, e a vaga que abre não é oferecida, porque ninguém poderia mais se matricular (R19). (H05, H06)
+
 R06
 O aluno só se matricula em turma do seu nível naquela matéria.
+
+R44
+O aluno tem no máximo uma turma em cada matéria. Ele pode estar na lista de espera de várias turmas de uma matéria em que ainda não tem turma; ao se matricular numa turma, sai das listas de espera das outras turmas da mesma matéria. (H04, H05)
 
 R07 *(alterada)*
 Nem o aluno nem o professor podem ter duas turmas com horários que se sobrepõem no mesmo dia da semana. (9.4)
@@ -115,6 +124,9 @@ Ao ser aprovado no nível máximo, o aluno recebe o certificado de nível desse 
 
 R27
 A turma é paga por mensalidade, com valor definido por matéria. A primeira mensalidade é paga na matrícula, e as seguintes vencem todo mês no dia da matrícula. (5.1, 9.3, 11.4)
+
+R46
+Quando o mês não tem o dia da matrícula, a mensalidade daquele mês vence no último dia dele: quem se matricula em 31/01 tem os vencimentos seguintes em 28/02 e 31/03. (H04, H07)
 
 R28
 Com a mensalidade atrasada, o aluno tem 7 dias de tolerância; depois disso, perde a vaga. (6.1, 7.4)
