@@ -57,6 +57,7 @@ from plataforma.modules.nivelamento.application.fazer_nivelamento import (
     ResponderQuestao,
     VerMeusNiveis,
 )
+from plataforma.modules.nivelamento.application.promocao import Promocoes
 from plataforma.modules.nivelamento.infra.repositorio_de_nivelamentos import (
     RepositorioDeNivelamentosSqlite,
 )
@@ -66,11 +67,13 @@ from plataforma.modules.nivelamento.infra.repositorio_de_questoes import (
 from plataforma.modules.turmas.application.casos_de_uso import (
     CasosDeUsoDeTurmas,
     CriarTurma,
+    EncerrarTurma,
     MudarHorario,
     TrocarProfessor,
     VerMinhasTurmas,
     VerTurmas,
 )
+from plataforma.modules.turmas.application.em_dia import AtualizarTurmas, TurmasEmDia
 from plataforma.modules.turmas.application.matricula import (
     CasosDeUsoDaMatricula,
     ConfirmarVaga,
@@ -81,9 +84,16 @@ from plataforma.modules.turmas.application.matricula import (
 )
 from plataforma.modules.turmas.application.presenca import (
     CasosDeUsoDasAulas,
+    CorrigirPresenca,
     LancarPresenca,
     MarcarAulaNaoRealizada,
     VerAulasDaTurma,
+)
+from plataforma.modules.turmas.application.prova_final import (
+    CasosDeUsoDaProvaFinal,
+    CorrigirNota,
+    LancarNota,
+    VerProvaFinal,
 )
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
 from plataforma.relogio import RelogioDoSistema
@@ -118,8 +128,19 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
     nivelamentos = RepositorioDeNivelamentosSqlite(conexao)
     do_aluno = (nivelamentos, questoes, consulta_de_materias, relogio, em_transacao)
     turmas = RepositorioDeTurmasSqlite(conexao)
-    leitura_das_turmas = (turmas, consulta_de_materias, consulta_de_professores, relogio)
     niveis = ConsultaDeNiveis(nivelamentos)
+    # Todo caso de uso das turmas põe as turmas em dia antes de agir, e a promoção é do
+    # nivelamento (ADR 0002).
+    promocoes = Promocoes(nivelamentos, consulta_de_materias)
+    em_dia = TurmasEmDia(turmas, consulta_de_materias, promocoes)
+    leitura_das_turmas = (
+        turmas,
+        consulta_de_materias,
+        consulta_de_professores,
+        relogio,
+        em_transacao,
+        em_dia,
+    )
     do_aluno_nas_turmas = (
         turmas,
         consulta_de_materias,
@@ -127,6 +148,7 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
         niveis,
         relogio,
         em_transacao,
+        em_dia,
     )
     das_aulas = (
         turmas,
@@ -135,6 +157,7 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
         alunos,
         relogio,
         em_transacao,
+        em_dia,
     )
     casos_de_uso = CasosDeUso(
         identidade=CasosDeUsoDaIdentidade(
@@ -168,15 +191,15 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
             ),
         ),
         turmas=CasosDeUsoDeTurmas(
-            criar_turma=CriarTurma(
-                turmas, consulta_de_materias, consulta_de_professores, relogio, em_transacao
-            ),
-            trocar_professor=TrocarProfessor(
-                turmas, consulta_de_materias, consulta_de_professores, em_transacao
-            ),
+            criar_turma=CriarTurma(*leitura_das_turmas),
+            trocar_professor=TrocarProfessor(*leitura_das_turmas),
             mudar_horario=MudarHorario(turmas),
+            encerrar_turma=EncerrarTurma(
+                turmas, consulta_de_materias, relogio, em_transacao, em_dia
+            ),
             ver_turmas=VerTurmas(*leitura_das_turmas),
             ver_minhas_turmas=VerMinhasTurmas(*leitura_das_turmas),
+            atualizar=AtualizarTurmas(em_dia, relogio, em_transacao),
         ),
         matricula=CasosDeUsoDaMatricula(
             ver_turmas_do_aluno=VerTurmasDoAluno(*do_aluno_nas_turmas),
@@ -188,7 +211,13 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
         aulas=CasosDeUsoDasAulas(
             ver_aulas=VerAulasDaTurma(*das_aulas),
             lancar_presenca=LancarPresenca(*das_aulas),
+            corrigir_presenca=CorrigirPresenca(*das_aulas),
             marcar_nao_realizada=MarcarAulaNaoRealizada(*das_aulas),
+        ),
+        prova_final=CasosDeUsoDaProvaFinal(
+            ver_prova_final=VerProvaFinal(*das_aulas),
+            lancar_nota=LancarNota(*das_aulas),
+            corrigir_nota=CorrigirNota(*das_aulas),
         ),
     )
 

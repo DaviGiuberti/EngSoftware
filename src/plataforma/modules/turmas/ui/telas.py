@@ -1,4 +1,5 @@
-"""Tela do ADM para criar turmas, trocar o professor e pedir a mudança de horário (H30, H31)."""
+"""Tela do ADM para criar turmas, trocar o professor e pedir a mudança de horário (H30, H31) ou o
+encerramento da turma, que é recusado: ela encerra sozinha depois do nível máximo (H10)."""
 
 from datetime import time
 
@@ -149,12 +150,16 @@ class TelaTurmas(QWidget):
         self.botao_trocar = QPushButton("Trocar professor")
         self.horario_da_escolhida = CamposDoHorario()
         self.botao_mudar_horario = QPushButton("Mudar horário")
+        self.botao_encerrar = QPushButton("Encerrar turma")
         linha_do_professor = QHBoxLayout()
         linha_do_professor.addWidget(self.novo_professor, 1)
         linha_do_professor.addWidget(self.botao_trocar)
         linha_do_horario = QHBoxLayout()
         linha_do_horario.addWidget(self.horario_da_escolhida, 1)
         linha_do_horario.addWidget(self.botao_mudar_horario)
+        linha_do_encerramento = QHBoxLayout()
+        linha_do_encerramento.addStretch()
+        linha_do_encerramento.addWidget(self.botao_encerrar)
         formulario_da_escolhida = QFormLayout()
         formulario_da_escolhida.addRow("Novo professor", linha_do_professor)
         formulario_da_escolhida.addRow("Dias e horário", linha_do_horario)
@@ -162,6 +167,7 @@ class TelaTurmas(QWidget):
         coluna_da_escolhida = QVBoxLayout(self._grupo_da_escolhida)
         coluna_da_escolhida.addWidget(self.escolhida)
         coluna_da_escolhida.addLayout(formulario_da_escolhida)
+        coluna_da_escolhida.addLayout(linha_do_encerramento)
 
         self.mensagem = QLabel()
         self.mensagem.setWordWrap(True)
@@ -178,6 +184,7 @@ class TelaTurmas(QWidget):
         self.botao_criar.clicked.connect(self._criar)
         self.botao_trocar.clicked.connect(self._trocar)
         self.botao_mudar_horario.clicked.connect(self._mudar_horario)
+        self.botao_encerrar.clicked.connect(self._encerrar)
         self.recarregar()
 
     def recarregar(self) -> None:
@@ -319,3 +326,19 @@ class TelaTurmas(QWidget):
                 mostrar_recusa(self.mensagem, mensagem)
         # O horário da turma não muda (R24): os campos voltam ao horário que ela tem.
         campos.mostrar(resumo.horario)
+
+    def _encerrar(self) -> None:
+        """R25: o pedido é recusado, e a mensagem diz quando a turma encerra."""
+        resumo = self._escolhida
+        if resumo is None:
+            return
+        resultado = executar(
+            "encerrar turma",
+            self._usuario.email,
+            lambda: self._casos_de_uso.encerrar_turma.executar(self._usuario, resumo.id),
+        )
+        match resultado:
+            case Feito(_):
+                self.recarregar()
+            case Falhou(mensagem):
+                mostrar_recusa(self.mensagem, mensagem)

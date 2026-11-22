@@ -12,7 +12,10 @@ def nome_da_turma(resumo: ResumoDaTurma) -> str:
 
 
 def descrever_etapa(resumo: ResumoDaTurma) -> str:
-    """Antes da 1ª aula, quando ela é; depois, quantas aulas da etapa já foram dadas (R43)."""
+    """Antes da 1ª aula, quando ela é; depois, quantas aulas da etapa já foram dadas (R43). A
+    turma que concluiu o nível máximo mostra quando encerrou (R09)."""
+    if resumo.encerrada_em is not None:
+        return f"encerrada em {resumo.encerrada_em:%d/%m/%Y}"
     if resumo.aulas_dadas == 0:
         return f"1ª aula em {formatar_data_e_hora(resumo.inicio_da_etapa)}"
     return f"{resumo.aulas_dadas} de {AULAS_POR_ETAPA} aulas dadas"

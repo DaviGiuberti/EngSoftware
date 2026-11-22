@@ -1,4 +1,5 @@
-"""Telas do aluno no nivelamento: o nível em cada matéria (H03) e o teste (H01, H02)."""
+"""Telas do aluno no nivelamento: o nível em cada matéria, com a trilha concluída (H03), e o
+teste (H01, H02)."""
 
 import math
 from collections.abc import Callable
@@ -110,6 +111,9 @@ class TelaMeusNiveis(QWidget):
             elif linha.situacao == SituacaoNaMateria.INDISPONIVEL:
                 aviso = QTableWidgetItem("Nivelamento ainda não disponível")
                 self.tabela.setItem(numero, 2, aviso)
+            elif linha.trilha_concluida:
+                # H03 e R09: aprovado no nível máximo, o aluno concluiu a trilha da matéria.
+                self.tabela.setItem(numero, 2, QTableWidgetItem("Trilha concluída"))
             else:
                 self.tabela.setItem(numero, 2, QTableWidgetItem(""))
 
