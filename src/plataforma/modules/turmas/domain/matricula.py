@@ -1,8 +1,8 @@
-"""Matrícula (H04, H05, H06, H13): só na turma do nível do aluno (R06), sem conflito de horário
-(R07), até antes da 13ª aula da etapa (R19), uma turma por matéria (R44) e com vaga livre (R04,
-R05)."""
+"""Matrícula (H04, H05, H06, H13, H07): só na turma do nível do aluno (R06), sem conflito de
+horário (R07), até antes da 13ª aula da etapa (R19), uma turma por matéria (R44) e com vaga livre
+(R04, R05). Quem perde a vaga por atraso vê um aviso até entrar em outra turma da matéria (R55)."""
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -46,11 +46,20 @@ class SemMatricula(Recusa):
     mensagem = "Você não tem matrícula nesta turma."
 
 
+class MotivoDaSaida(StrEnum):
+    """Por que a matrícula terminou."""
+
+    VONTADE = "vontade"  # R29: o aluno saiu da turma
+    REPROVACAO = "reprovacao"  # R21: o resultado da etapa valeu, reprovado
+    CONCLUSAO = "conclusao"  # R09: aprovado na etapa do nível máximo, na turma que encerrou
+    ATRASO = "atraso"  # R28: a mensalidade não foi paga até o fim da tolerância
+
+
 @dataclass(frozen=True)
 class Matricula:
     """O aluno na turma desde matriculada_em. A aula de entrada sai das aulas dadas até ali.
 
-    saiu_em é quando o aluno saiu da turma, por vontade própria (R29) ou por reprovação (R21).
+    saiu_em é quando o aluno saiu da turma, e saiu_por, o motivo.
     """
 
     id: int
@@ -58,6 +67,7 @@ class Matricula:
     aluno_id: int
     matriculada_em: datetime
     saiu_em: datetime | None = None
+    saiu_por: MotivoDaSaida | None = None
 
 
 class SituacaoNaTurma(StrEnum):
@@ -146,3 +156,24 @@ def situacao_na_turma(
     if vagas_livres > 0:
         return SituacaoNaTurma.COM_VAGA
     return SituacaoNaTurma.CHEIA
+
+
+def vagas_perdidas(
+    matriculas: Sequence[Matricula], materia_da_turma: Mapping[int, int]
+) -> list[Matricula]:
+    """R55: as matrículas que o aluno perdeu por atraso da mensalidade e cujo aviso ele ainda vê,
+    porque não entrou depois em outra turma da mesma matéria.
+
+    materia_da_turma leva o id de cada turma das matrículas ao id da matéria dela.
+    """
+    return [
+        perdida
+        for perdida in matriculas
+        if perdida.saiu_por == MotivoDaSaida.ATRASO
+        and perdida.saiu_em is not None
+        and not any(
+            materia_da_turma[outra.turma_id] == materia_da_turma[perdida.turma_id]
+            and outra.matriculada_em >= perdida.saiu_em
+            for outra in matriculas
+        )
+    ]
