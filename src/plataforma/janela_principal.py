@@ -32,6 +32,8 @@ from plataforma.modules.identidade.ui.telas import (
 from plataforma.modules.identidade.ui.telas_do_adm import TelaProfessores
 from plataforma.modules.materias.application.casos_de_uso import CasosDeUsoDeMaterias
 from plataforma.modules.materias.ui.telas import TelaMaterias
+from plataforma.modules.metricas.application.casos_de_uso import VerMetricas
+from plataforma.modules.metricas.ui.telas import TelaMetricas
 from plataforma.modules.nivelamento.application.casos_de_uso import CasosDeUsoDoNivelamento
 from plataforma.modules.nivelamento.ui.telas import TelaExcecoes, TelaQuestoes
 from plataforma.modules.nivelamento.ui.telas_do_aluno import AreaDoAluno, TelaMeusCertificados
@@ -60,6 +62,7 @@ class CasosDeUso:
     catalogo: CasosDeUsoDoCatalogo
     catalogo_do_aluno: CasosDeUsoDoAluno
     vendas: CasosDeUsoDeVendas
+    metricas: VerMetricas
 
 
 def por_as_turmas_em_dia(usuario: Usuario, turmas: CasosDeUsoDeTurmas) -> None:
@@ -142,7 +145,8 @@ class AbasDoProfessor(QTabWidget):
 
 class AreaDoAdm(QTabWidget):
     """Abas do ADM: as matérias, as questões do nivelamento, os professores, as turmas, a
-    presença e as notas de qualquer turma, as exceções do nivelamento e os pacotes."""
+    presença e as notas de qualquer turma, as exceções do nivelamento, os pacotes e as
+    métricas."""
 
     def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUso) -> None:
         super().__init__()
@@ -172,8 +176,12 @@ class AreaDoAdm(QTabWidget):
         self.addTab(self.tela_turmas, "Turmas")
         self.addTab(self.tela_presenca_e_notas, "Presença e notas")
         self.tela_pacotes = TelaPacotes(usuario, casos_de_uso.catalogo)
+        self._usuario = usuario
+        self._casos_das_turmas = casos_de_uso.turmas
         self.addTab(self.tela_excecoes, "Exceções do nivelamento")
+        self.tela_metricas = TelaMetricas(usuario, casos_de_uso.metricas)
         self.addTab(self.tela_pacotes, "Pacotes")
+        self.addTab(self.tela_metricas, "Métricas")
         self.tela_materias.materias_mudaram.connect(self.tela_questoes.recarregar_materias)
         self.tela_materias.materias_mudaram.connect(self.tela_professores.recarregar)
         self.tela_materias.materias_mudaram.connect(self.tela_turmas.recarregar)
@@ -188,6 +196,10 @@ class AreaDoAdm(QTabWidget):
         # Um professor pode ter enviado um pacote para revisão desde que a aba foi lida.
         elif self.currentWidget() is self.tela_pacotes:
             self.tela_pacotes.recarregar()
+        # As promoções que passaram a valer entram na M1 (R49, R65).
+        elif self.currentWidget() is self.tela_metricas:
+            por_as_turmas_em_dia(self._usuario, self._casos_das_turmas)
+            self.tela_metricas.recarregar()
 
 
 class TelaInicio(QWidget):
