@@ -1,6 +1,7 @@
-"""Casos de uso do aluno no catálogo (H14, H16): ver a vitrine, com destaque para o nível dele em
-cada matéria (R15, R31), ver os pacotes que comprou, com o progresso, assistir à aula pelo link do
-YouTube (R61) e marcar a aula como concluída (R62).
+"""Casos de uso do aluno no catálogo (H14, H16, H17): ver a vitrine, com destaque para o nível dele
+em cada matéria (R15, R31), ver os pacotes que comprou, com o progresso, assistir à aula pelo link
+do YouTube (R61) e marcar a aula como concluída (R62). No reembolso, o vendas apaga as aulas
+concluídas do pacote pelo ApagarAulasConcluidas (R63).
 
 O acesso de cada pacote vem do módulo vendas pela porta Acessos (ADR 0002).
 """
@@ -164,6 +165,17 @@ class ConcluirAula(_CasoDoAluno):
             )
             self._concluidas.adicionar(aluno.id, concluida)
             return concluida
+
+
+class ApagarAulasConcluidas:
+    """R63: o reembolso apaga as aulas que o aluno concluiu no pacote. O vendas chama este serviço
+    dentro da transação do reembolso, sem ler a tabela do catalogo (ADR 0002)."""
+
+    def __init__(self, concluidas: RepositorioDeAulasConcluidas) -> None:
+        self._concluidas = concluidas
+
+    def executar(self, aluno_id: int, pacote_id: int) -> None:
+        self._concluidas.apagar(aluno_id, pacote_id)
 
 
 @dataclass(frozen=True)
