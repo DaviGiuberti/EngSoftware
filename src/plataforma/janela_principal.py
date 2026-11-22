@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from plataforma.acoes import executar
 from plataforma.modules.identidade.application.casos_de_uso import CasosDeUsoDaIdentidade
 from plataforma.modules.identidade.domain.usuario import Perfil, Usuario
 from plataforma.modules.identidade.ui.telas import (
@@ -33,9 +34,10 @@ from plataforma.modules.nivelamento.ui.telas_do_aluno import AreaDoAluno
 from plataforma.modules.turmas.application.casos_de_uso import CasosDeUsoDeTurmas
 from plataforma.modules.turmas.application.matricula import CasosDeUsoDaMatricula
 from plataforma.modules.turmas.application.presenca import CasosDeUsoDasAulas
+from plataforma.modules.turmas.application.prova_final import CasosDeUsoDaProvaFinal
 from plataforma.modules.turmas.ui.telas import TelaTurmas
 from plataforma.modules.turmas.ui.telas_do_aluno import TelaTurmasDoAluno
-from plataforma.modules.turmas.ui.telas_do_professor import TelaMinhasTurmas
+from plataforma.modules.turmas.ui.telas_do_professor import TelaMinhasTurmas, TelaPresencaENotas
 
 
 @dataclass(frozen=True)
@@ -48,6 +50,13 @@ class CasosDeUso:
     turmas: CasosDeUsoDeTurmas
     matricula: CasosDeUsoDaMatricula
     aulas: CasosDeUsoDasAulas
+    prova_final: CasosDeUsoDaProvaFinal
+
+
+def por_as_turmas_em_dia(usuario: Usuario, turmas: CasosDeUsoDeTurmas) -> None:
+    """Aplica o que o tempo decidiu nas turmas, como a promoção, antes de mostrar uma tela que
+    depende disso sem passar pelas turmas, como "Meus níveis" (R49)."""
+    executar("pôr as turmas em dia", usuario.email, turmas.atualizar.executar)
 
 
 class AbasDoAluno(QTabWidget):
@@ -55,6 +64,8 @@ class AbasDoAluno(QTabWidget):
 
     def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUso) -> None:
         super().__init__()
+        self._usuario = usuario
+        self._casos_das_turmas = casos_de_uso.turmas
         self.nivelamento = AreaDoAluno(usuario, casos_de_uso.nivelamento)
         self.turmas = TelaTurmasDoAluno(usuario, casos_de_uso.matricula)
         self.addTab(self.nivelamento, "Meus níveis")
@@ -71,6 +82,10 @@ class AbasDoAluno(QTabWidget):
         # O nivelamento pode ter mudado o nível do aluno: a aba Turmas lê tudo de novo.
         if self.currentWidget() is self.turmas:
             self.turmas.recarregar()
+        # A promoção pode ter passado a valer (R49): os níveis são lidos de novo.
+        elif self.currentWidget() is self.nivelamento:
+            por_as_turmas_em_dia(self._usuario, self._casos_das_turmas)
+            self.nivelamento.tela_meus_niveis.recarregar()
 
     def _avisar_no_titulo(self, vagas_oferecidas: int) -> None:
         """H06: o aluno vê a vaga oferecida sem precisar abrir a aba Turmas."""
@@ -84,8 +99,8 @@ class AbasDoAluno(QTabWidget):
 
 
 class AreaDoAdm(QTabWidget):
-    """Abas do ADM: as matérias, as questões do nivelamento, os professores, as turmas e as
-    exceções do nivelamento."""
+    """Abas do ADM: as matérias, as questões do nivelamento, os professores, as turmas, a
+    presença e as notas de qualquer turma e as exceções do nivelamento."""
 
     def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUso) -> None:
         super().__init__()
@@ -103,6 +118,9 @@ class AreaDoAdm(QTabWidget):
             consulta_de_materias,
             casos_de_uso.identidade.consulta_de_professores,
         )
+        self.tela_presenca_e_notas = TelaPresencaENotas(
+            usuario, casos_de_uso.turmas, casos_de_uso.aulas, casos_de_uso.prova_final
+        )
         self.tela_excecoes = TelaExcecoes(
             usuario, consulta_de_materias, casos_de_uso.nivelamento
         )
@@ -110,12 +128,19 @@ class AreaDoAdm(QTabWidget):
         self.addTab(self.tela_questoes, "Questões do nivelamento")
         self.addTab(self.tela_professores, "Professores")
         self.addTab(self.tela_turmas, "Turmas")
+        self.addTab(self.tela_presenca_e_notas, "Presença e notas")
         self.addTab(self.tela_excecoes, "Exceções do nivelamento")
         self.tela_materias.materias_mudaram.connect(self.tela_questoes.recarregar_materias)
         self.tela_materias.materias_mudaram.connect(self.tela_professores.recarregar)
         self.tela_materias.materias_mudaram.connect(self.tela_turmas.recarregar)
         self.tela_materias.materias_mudaram.connect(self.tela_excecoes.recarregar_materias)
         self.tela_professores.professores_mudaram.connect(self.tela_turmas.recarregar)
+        self.currentChanged.connect(self._ao_trocar_de_aba)
+
+    def _ao_trocar_de_aba(self, _indice: int) -> None:
+        # As turmas podem ter mudado na aba Turmas: a presença e as notas leem tudo de novo.
+        if self.currentWidget() is self.tela_presenca_e_notas:
+            self.tela_presenca_e_notas.recarregar()
 
 
 class TelaInicio(QWidget):
@@ -206,6 +231,8 @@ class JanelaPrincipal(QMainWindow):
         super().closeEvent(event)
 
     def _entrou(self, usuario: Usuario) -> None:
+        # O nível do aluno pode ter mudado desde a última vez (R49): "Meus níveis" já abre certo.
+        por_as_turmas_em_dia(usuario, self._casos_de_uso.turmas)
         self.tela_inicio.mostrar(usuario, self._area_do_perfil(usuario))
         self.telas.setCurrentWidget(self.tela_inicio)
 
@@ -214,7 +241,8 @@ class JanelaPrincipal(QMainWindow):
             return AreaDoAdm(usuario, self._casos_de_uso)
         if usuario.perfil == Perfil.ALUNO:
             return AbasDoAluno(usuario, self._casos_de_uso)
-        return TelaMinhasTurmas(usuario, self._casos_de_uso.turmas, self._casos_de_uso.aulas)
+        casos = self._casos_de_uso
+        return TelaMinhasTurmas(usuario, casos.turmas, casos.aulas, casos.prova_final)
 
     def _encerrar_area(self) -> None:
         """Quem sai no meio do nivelamento tem o tempo parado antes de a conexão fechar."""

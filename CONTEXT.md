@@ -44,25 +44,28 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Turma | Grupo de alunos que estuda uma matéria ao vivo com um professor, em dias e horário fixos, com até 12 vagas. É contínua: começa no nível que o ADM escolhe e passa para o nível seguinte a cada etapa, até concluir o nível máximo (R04, R24, R25). | `Turma` |
 | Horário | Dias da semana (1 ou 2) e horas de início e de fim das aulas de uma turma. Não muda durante a vida da turma (R04, R24). | `Horario` (`dias`, `inicio`, `fim`) |
 | Vaga | Lugar de um aluno numa turma. Cada turma tem 12. | `vagas` |
-| Etapa | Período de 24 aulas da turma num nível. Começa na 1ª aula, que na primeira etapa é o primeiro dia da turma depois da criação (R43), e termina depois da 24ª aula, com a prova final (R17). | `Etapa`, `inicio_da_etapa` |
+| Etapa | Período de 24 aulas da turma num nível. Começa na 1ª aula, que na primeira etapa é o primeiro dia da turma depois da criação (R43) e, nas seguintes, o primeiro dia dela depois do fim da etapa anterior. Termina no fim da 24ª aula, no horário de término dela, com a prova final (R17). Nesse momento, a turma passa para o nível seguinte (R04) ou, no nível máximo, encerra (R09). | `Etapa`, `inicio_da_etapa`, `fim` |
+| Turma encerrada | Turma que concluiu a etapa do nível máximo (R09). Não tem mais aulas, não recebe matrícula nem lista de espera e não conta no conflito de horário (R07). Quem ainda espera o resultado continua nela até ele valer (R23, R49). Ninguém encerra a turma antes disso (R25). | `encerrada_em` |
 | Aula | Encontro ao vivo da turma, no horário dela, pelo link do Google Meet. Numerada de 1 a 24 dentro da etapa. | `Aula` |
 | Aula dada | Aula que já começou e não foi marcada como não realizada. É a que conta nas 24 da etapa e no limite da matrícula, até antes da 13ª aula (R19, R43). | `aulas_dadas` |
 | Aula não realizada | Aula que não aconteceu (feriado, professor doente). Não conta nas 24 e é reposta no fim da etapa, no mesmo horário. O professor marca qualquer aula ainda sem presença, passada ou futura, e a marcação é definitiva (R18, R48). | `nao_realizadas` (as datas, na `Turma`) |
 | Calendário da etapa | As datas das aulas da etapa, da 1ª à 24ª, com as não realizadas no meio, sem número (R18, R43). | `calendario`, `AulaDaEtapa` |
 | Matrícula | Vínculo do aluno com uma turma. Começa com o pagamento da primeira mensalidade, só antes da 13ª aula da etapa, e guarda a aula de entrada, a partir da qual as faltas contam. O aluno tem no máximo uma por matéria (R08, R19, R27, R44). | `Matricula` (`aula_de_entrada`) |
-| Lista de espera | Lista, em ordem de entrada, dos alunos que esperam vaga numa turma cheia. Quando abre vaga, o 1º tem 72 horas para confirmar. O aluno pode estar na lista de várias turmas de uma matéria em que ainda não tem turma (R05, R44). | `ListaDeEspera` |
+| Lista de espera | Lista, em ordem de entrada, dos alunos que esperam vaga numa turma cheia. Quando abre vaga, o 1º tem 72 horas para confirmar. O aluno pode estar na lista de várias turmas de uma matéria em que ainda não tem turma (R05, R44). No fim da etapa, ela é esvaziada (R50). | `ListaDeEspera` |
 | Oferta de vaga | Vaga que abriu numa turma com lista de espera e foi oferecida ao 1º da lista sem oferta. Ele tem 72 horas para confirmar, e enquanto isso a vaga fica reservada. Confirmar é se matricular; quem não confirma sai da lista. A partir da 13ª aula da etapa, a vaga não é oferecida (R05, R35, R45, R47). | `Oferta` (`prazo`) |
 | Presença | Registro, por aula e por aluno, de que ele esteve presente ou ausente. Lançado pelo professor da turma ou pelo ADM, só em aula que já começou, para os alunos que estão na turma desde aquela aula (R08, R10, R43). | `Presenca` |
 | Falta | Presença marcada como ausente. Só conta a partir da entrada do aluno na turma; o limite é de 6 por etapa (R08). | `Presenca` com `presente=False` |
-| Prova final | Prova do fim da etapa, aplicada pelo professor fora da plataforma. O professor lança a nota (R20). | `ProvaFinal` |
-| Correção | Mudança de uma presença ou nota já lançada. O professor corrige até 72 horas depois do lançamento; depois, só o ADM, e o nível só muda para cima (R22). | `Correcao` |
+| Prova final | Prova do fim da etapa, aplicada pelo professor fora da plataforma. O professor lança a nota de cada aluno depois da 24ª aula (R17, R20). | `ProvaFinal` |
+| Nota | Nota da prova final, de 0 a 10, com uma casa decimal, como 6,5 (R51). O código guarda a nota em décimos: 6,5 é 65. | `Nota` |
+| Correção | Mudança de uma presença ou nota já lançada. O professor corrige até 72 horas depois do lançamento, e as 72 horas não recomeçam a cada correção. Depois, só o ADM corrige, e o nível só muda para cima (R22). | `CorrigirNota`, `CorrigirPresenca`, `PRAZO_DE_CORRECAO` |
 
 ## Resultado e promoção
 
 | Termo | Significado | Nome no código |
 |---|---|---|
-| Resultado da etapa | Situação do aluno no fim da etapa: aprovado (no máximo 6 faltas e nota ≥ 7), reprovado ou pendente, quando a nota ainda não foi lançada (R08, R23). | `ResultadoEtapa` (`aprovado`, `reprovado`, `pendente`) |
-| Promoção | Subida de exatamente um nível no fim da etapa, para o aluno aprovado. Nas regras também aparece como "subir de nível" (R08, R09). | `Promocao` |
+| Resultado da etapa | Situação do aluno no fim da etapa: aprovado (no máximo 6 faltas e nota ≥ 7), reprovado ou pendente, quando a nota ainda não foi lançada (R08, R23). Passa a valer quando terminam as 72 horas de correção da nota: aí o aprovado é promovido, e o reprovado sai da turma (R49). | `ResultadoEtapa` (`aprovado`, `reprovado`, `pendente`) |
+| Promoção | Subida de exatamente um nível no fim da etapa, para o aluno aprovado, quando o resultado passa a valer (R08, R09, R49). Fica guardada com a data, que a M1 e os certificados usam. Nas regras também aparece como "subir de nível". | `Promocao` |
+| Trilha concluída | Aprovação na etapa do nível máximo da matéria. O aluno continua no nível máximo, e a turma encerra (R09). | `trilha_concluida` |
 | Certificado | Documento emitido pela plataforma: de nível, na promoção; de trilha, ao concluir o nível máximo; de pacote, fora do MVP (R16, R33). | `Certificado` (`nivel`, `trilha`, `pacote`) |
 
 ## Mensalidade

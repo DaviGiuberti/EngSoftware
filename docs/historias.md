@@ -250,7 +250,7 @@ Cenário: R08 — limite de faltas ultrapassado
 
 ### H09 · Promoção de nível
 
-Como aluno, quero ser promovido ao próximo nível no fim da etapa quando cumprir os requisitos, para avançar na trilha. Prioridade: Alta. Regras: R08, R09, R17.
+Como aluno, quero ser promovido ao próximo nível no fim da etapa quando cumprir os requisitos, para avançar na trilha. Prioridade: Alta. Regras: R08, R09, R17, R49.
 
 ```gherkin
 Cenário: R08 — 6 faltas e nota 7 promovem
@@ -314,7 +314,7 @@ Cenário: R25 — turma sem alunos continua aberta
 
 ### H11 · Recomeçar o nível em outra turma
 
-Como aluno reprovado na etapa, quero encontrar outra turma do mesmo nível para recomeçar o nível sem sair da trilha. Prioridade: Média. Regras: R06, R08, R19, R21, R23.
+Como aluno reprovado na etapa, quero encontrar outra turma do mesmo nível para recomeçar o nível sem sair da trilha. Prioridade: Média. Regras: R06, R08, R19, R21, R23, R50.
 
 ```gherkin
 Cenário: R23 — o reprovado fica na turma durante as 72 horas de correção
@@ -334,6 +334,12 @@ Cenário: R19 e R21 — o reprovado entra em outra turma do mesmo nível no meio
   Quando ele se matricula nessa turma
   Então a matrícula é aceita
   E as faltas dele contam a partir da 9ª aula
+
+Cenário: R50 — a lista de espera da etapa que terminou é esvaziada
+  Dada uma turma cheia de Física do N2 com Bruno na lista de espera
+  Quando a etapa do N2 termina
+  Então Bruno sai da lista de espera
+  E a turma começa a etapa do N3 com a lista vazia
 ```
 
 ### H12 · Receber certificados de nível e de trilha
@@ -604,7 +610,7 @@ Cenário: R48 — aula com presença não vira não realizada
 
 ### H23 · Lançar a nota da prova final
 
-Como professor, quero lançar a nota da prova final, aplicada fora da plataforma, para que o sistema decida quem é promovido. Prioridade: Alta. Regras: R10, R17, R20, R23.
+Como professor, quero lançar a nota da prova final, aplicada fora da plataforma, para que o sistema decida quem é promovido. Prioridade: Alta. Regras: R10, R17, R20, R23, R49.
 
 ```gherkin
 Cenário: R20 — lançar a nota depois da 24ª aula
@@ -626,11 +632,16 @@ Cenário: R23 — aluno sem nota continua na turma
   Dado que a etapa do N2 terminou e Carlos ainda não lançou a nota de Ana
   Quando a turma passa para o N3
   Então Ana continua na turma, ocupando a vaga, com o resultado pendente
+
+Cenário: R49 — o resultado vale quando terminam as 72 horas de correção
+  Dado que Carlos lançou nota 8 para Ana, do N2 de Física, em 10/03 às 10h
+  Quando chega 13/03 às 10h
+  Então Ana é promovida para o N3 de Física
 ```
 
 ### H24 · Corrigir presença ou nota
 
-Como professor, quero corrigir uma presença ou nota até 72 horas depois de lançá-la para consertar um erro sem depender do ADM. Prioridade: Média. Regras: R22.
+Como professor, quero corrigir uma presença ou nota até 72 horas depois de lançá-la para consertar um erro sem depender do ADM. Prioridade: Média. Regras: R22, R49, R51.
 
 ```gherkin
 Cenário: R22 — correção dentro de 72 horas
@@ -652,6 +663,11 @@ Cenário: R22 — correção para baixo dentro do prazo
   Dado que Carlos lançou nota 7 para Ana em 10/03 às 10h
   Quando ele corrige a nota para 6 em 11/03
   Então Ana fica reprovada na etapa
+
+Cenário: R51 — a nota tem uma casa decimal
+  Dado que Carlos lançou nota 6 para Ana em 10/03 às 10h
+  Quando ele tenta corrigir a nota para 6,75 em 11/03
+  Então o sistema recusa, informando que a nota vai de 0 a 10, com uma casa decimal
 ```
 
 ### H25 · Criar pacote e enviar para revisão
@@ -828,7 +844,7 @@ Cenário: R07 — o novo professor não pode ter conflito de horário
 
 ### H32 · Lançar e corrigir presença e nota em qualquer turma
 
-Como ADM, quero lançar e corrigir presença e nota em qualquer turma para resolver lançamentos que o professor esqueceu ou errou. Prioridade: Média. Regras: R10, R22, R23.
+Como ADM, quero lançar e corrigir presença e nota em qualquer turma para resolver lançamentos que o professor esqueceu ou errou. Prioridade: Média. Regras: R10, R22, R23, R52.
 
 ```gherkin
 Cenário: R10 — o ADM lança presença em qualquer turma
@@ -841,10 +857,11 @@ Cenário: R23 — o ADM lança a nota que o professor não lançou
   Quando o ADM lança nota 8 para Ana
   Então a nota de Ana fica registrada
 
-Cenário: R22 — correção do ADM que aprova o aluno
+Cenário: R22 e R52 — correção do ADM que aprova o aluno
   Dado que Ana, do N2 de Física, foi reprovada com nota 6, lançada em 10/03, e saiu da turma
   Quando o ADM corrige a nota para 7 em 20/03
   Então Ana é promovida para o N3 de Física
+  E ela não volta para a turma
 
 Cenário: R22 — correção do ADM que reprova quem já foi promovido
   Dado que Ana foi promovida do N2 para o N3 de Física com nota 8, lançada em 10/03
@@ -1066,3 +1083,7 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R46 | H07 |
 | R47 | H06 |
 | R48 | H22 |
+| R49 | H23 |
+| R50 | H11 |
+| R51 | H24 |
+| R52 | H32 |

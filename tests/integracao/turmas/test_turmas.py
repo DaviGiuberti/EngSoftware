@@ -36,6 +36,10 @@ from plataforma.modules.materias.domain.materia import Materia, MateriaNaoEncont
 from plataforma.modules.materias.infra.repositorio_de_materias import (
     RepositorioDeMateriasSqlite,
 )
+from plataforma.modules.nivelamento.application.promocao import Promocoes
+from plataforma.modules.nivelamento.infra.repositorio_de_nivelamentos import (
+    RepositorioDeNivelamentosSqlite,
+)
 from plataforma.modules.turmas.application.casos_de_uso import (
     CriarTurma,
     MudarHorario,
@@ -44,6 +48,7 @@ from plataforma.modules.turmas.application.casos_de_uso import (
     VerMinhasTurmas,
     VerTurmas,
 )
+from plataforma.modules.turmas.application.em_dia import TurmasEmDia
 from plataforma.modules.turmas.domain.horario import (
     DiaDaSemana,
     HorarioInvalido,
@@ -95,16 +100,19 @@ def casos(
     repositorio_de_materias = RepositorioDeMateriasSqlite(conexao)
     materias = ConsultaDeMaterias(repositorio_de_materias)
     turmas = RepositorioDeTurmasSqlite(conexao)
+    promocoes = Promocoes(RepositorioDeNivelamentosSqlite(conexao), materias)
+    em_dia = TurmasEmDia(turmas, materias, promocoes)
+    leitura = (turmas, materias, professores, relogio, em_transacao, em_dia)
     return Casos(
         cadastrar_materia=CadastrarMateria(repositorio_de_materias, em_transacao),
         cadastrar_professor=CadastrarProfessor(usuarios, em_transacao),
         habilitar_professor=HabilitarProfessor(repositorio_de_professores, materias, em_transacao),
         cadastrar_aluno=CadastrarAluno(usuarios, em_transacao),
-        criar_turma=CriarTurma(turmas, materias, professores, relogio, em_transacao),
-        trocar_professor=TrocarProfessor(turmas, materias, professores, em_transacao),
+        criar_turma=CriarTurma(*leitura),
+        trocar_professor=TrocarProfessor(*leitura),
         mudar_horario=MudarHorario(turmas),
-        ver_turmas=VerTurmas(turmas, materias, professores, relogio),
-        ver_minhas_turmas=VerMinhasTurmas(turmas, materias, professores, relogio),
+        ver_turmas=VerTurmas(*leitura),
+        ver_minhas_turmas=VerMinhasTurmas(*leitura),
     )
 
 

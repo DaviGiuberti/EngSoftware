@@ -1,4 +1,5 @@
-"""Nivelamentos, respostas e níveis dos alunos no SQLite, nas tabelas da migração 0005.
+"""Nivelamentos, respostas e níveis dos alunos no SQLite, nas tabelas da migração 0005, e as
+promoções e trilhas concluídas da 0011.
 
 Todo SQL usa parâmetros "?" (RNF08). As datas vão como texto ISO 8601, com o fuso.
 """
@@ -13,6 +14,7 @@ from plataforma.modules.nivelamento.domain.nivelamento import (
     NivelDoAluno,
     TempoDoNivelamento,
 )
+from plataforma.modules.nivelamento.domain.promocao import Promocao
 
 _POR_ID = (
     "SELECT id, aluno_id, materia_id, tempo_usado_em_segundos, tempo_extra_em_segundos, "
@@ -106,6 +108,43 @@ class RepositorioDeNivelamentosSqlite:
             "nivel = excluded.nivel, refazer_liberado = excluded.refazer_liberado",
             (aluno_id, nivel.materia_id, nivel.nivel, nivel.refazer_liberado),
         )
+
+    def adicionar_promocao(self, aluno_id: int, promocao: Promocao) -> None:
+        self._conexao.execute(
+            "INSERT INTO promocao (aluno_id, materia_id, nivel_anterior, nivel_novo, "
+            "promovido_em) VALUES (?, ?, ?, ?, ?)",
+            (
+                aluno_id,
+                promocao.materia_id,
+                promocao.nivel_anterior,
+                promocao.nivel_novo,
+                promocao.em.isoformat(),
+            ),
+        )
+
+    def promocoes(self, aluno_id: int) -> list[Promocao]:
+        linhas = self._conexao.execute(
+            "SELECT materia_id, nivel_anterior, nivel_novo, promovido_em FROM promocao "
+            "WHERE aluno_id = ? ORDER BY promovido_em, materia_id",
+            (aluno_id,),
+        )
+        return [
+            Promocao(materia_id, anterior, novo, datetime.fromisoformat(em))
+            for materia_id, anterior, novo, em in linhas
+        ]
+
+    def concluir_trilha(self, aluno_id: int, materia_id: int, em: datetime) -> None:
+        self._conexao.execute(
+            "INSERT INTO trilha_concluida (aluno_id, materia_id, concluida_em) VALUES (?, ?, ?) "
+            "ON CONFLICT (aluno_id, materia_id) DO NOTHING",
+            (aluno_id, materia_id, em.isoformat()),
+        )
+
+    def trilhas_concluidas(self, aluno_id: int) -> set[int]:
+        linhas = self._conexao.execute(
+            "SELECT materia_id FROM trilha_concluida WHERE aluno_id = ?", (aluno_id,)
+        )
+        return {materia_id for (materia_id,) in linhas}
 
     def _montar(self, linha: tuple[Any, ...] | None) -> Nivelamento | None:
         if linha is None:

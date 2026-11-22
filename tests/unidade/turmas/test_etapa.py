@@ -3,7 +3,7 @@ aulas seguem os dias e o horário da turma, e a aula conta como dada quando come
 tem 24 aulas (R17), e a aula não realizada não conta nelas: é reposta no fim (R18). Só a aula
 ainda sem presença pode ser marcada como não realizada (R48)."""
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from itertools import islice
 
 import pytest
@@ -12,12 +12,18 @@ from plataforma.compartilhado.horario import BRASILIA
 from plataforma.modules.turmas.domain.etapa import (
     AULAS_POR_ETAPA,
     AulaComPresenca,
+    Etapa,
+    EtapaNaoEncontrada,
+    EtapaTerminada,
     JaNaoRealizada,
     SemAulaNaData,
     aula_na_data,
+    aula_nas_etapas,
     aulas_dadas,
     calendario,
     datas_das_aulas,
+    etapa_do_nivel,
+    exigir_etapa_em_andamento,
     marcar_nao_realizada,
     primeira_aula_depois,
     proxima_aula,
@@ -172,3 +178,64 @@ def test_dia_sem_aula_da_etapa_e_recusado() -> None:
 
     with pytest.raises(SemAulaNaData, match="A etapa não tem aula em 14/04/2027."):
         aula_na_data(aulas, date(2027, 4, 14))
+
+
+# A etapa do N2 da turma que começa na terça 24/11/2026 tem a 24ª aula na quinta 11/02/2027.
+ETAPA_DO_N2 = Etapa(TER_E_QUI_19H, 2, TERCA_24_11_19H)
+
+
+def test_r17_a_etapa_termina_no_fim_da_24a_aula() -> None:
+    assert ETAPA_DO_N2.fim == em(11, 2, 20, 30, ano=2027)
+    assert not ETAPA_DO_N2.terminou(em(11, 2, 20, 29, ano=2027))
+    assert ETAPA_DO_N2.terminou(em(11, 2, 20, 30, ano=2027))
+
+
+def test_r18_a_aula_nao_realizada_empurra_o_fim_da_etapa_para_o_proximo_dia_da_turma() -> None:
+    com_nao_realizada = Etapa(TER_E_QUI_19H, 2, TERCA_24_11_19H, frozenset({date(2026, 11, 26)}))
+
+    assert com_nao_realizada.fim == em(16, 2, 20, 30, ano=2027)
+
+
+def test_r04_r43_a_etapa_seguinte_comeca_no_proximo_dia_da_turma_no_mesmo_horario() -> None:
+    seguinte = ETAPA_DO_N2.seguinte()
+
+    assert (seguinte.nivel, seguinte.horario) == (3, TER_E_QUI_19H)
+    assert seguinte.inicio == em(16, 2, ano=2027)
+    assert seguinte.nao_realizadas == frozenset()
+    assert seguinte.aulas_dadas(ETAPA_DO_N2.fim) == 0
+
+
+def test_r43_a_etapa_seguinte_da_turma_de_1_aula_por_semana_comeca_na_semana_seguinte() -> None:
+    quinta_19h = novo_horario([DiaDaSemana.QUINTA], time(19), time(20, 30))
+    etapa = Etapa(quinta_19h, 1, em(26, 11))
+
+    assert etapa.seguinte().inicio == etapa.fim.replace(hour=19, minute=0) + timedelta(weeks=1)
+
+
+def test_r48_depois_do_fim_da_etapa_as_aulas_dela_nao_mudam_mais() -> None:
+    with pytest.raises(
+        EtapaTerminada,
+        match="A etapa do N2 terminou em 11/02/2027, às 20h30: as aulas dela não mudam mais.",
+    ):
+        exigir_etapa_em_andamento(ETAPA_DO_N2, em(12, 2, ano=2027))
+    exigir_etapa_em_andamento(ETAPA_DO_N2, em(11, 2, 20, 29, ano=2027))
+
+
+def test_a_aula_de_uma_data_e_achada_na_etapa_que_terminou_ou_na_atual() -> None:
+    etapas = [ETAPA_DO_N2, ETAPA_DO_N2.seguinte()]
+
+    etapa, aula = aula_nas_etapas(etapas, date(2027, 2, 11))
+    assert (etapa.nivel, aula.numero) == (2, 24)
+    etapa, aula = aula_nas_etapas(etapas, date(2027, 2, 16))
+    assert (etapa.nivel, aula.numero) == (3, 1)
+
+
+def test_data_sem_aula_em_nenhuma_etapa_da_turma_e_recusada() -> None:
+    with pytest.raises(SemAulaNaData, match="A turma não tem aula em 15/02/2027."):
+        aula_nas_etapas([ETAPA_DO_N2], date(2027, 2, 15))
+
+
+def test_a_turma_so_tem_as_etapas_dos_niveis_por_que_passou() -> None:
+    assert etapa_do_nivel([ETAPA_DO_N2], 2) == ETAPA_DO_N2
+    with pytest.raises(EtapaNaoEncontrada, match="A turma não tem a etapa do N3."):
+        etapa_do_nivel([ETAPA_DO_N2], 3)

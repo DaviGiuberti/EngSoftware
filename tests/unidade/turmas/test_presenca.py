@@ -1,13 +1,14 @@
-"""Presença e faltas (H21, H22, H08): a presença é lançada por aula, só em aula que já começou
-(R43) e que foi realizada (R18), para os alunos que estão na turma desde aquela aula. As faltas
-contam a partir da entrada do aluno, com limite de 6 por etapa (R08)."""
+"""Presença e faltas (H21, H22, H08, H24): a presença é lançada por aula, só em aula que já
+começou (R43) e que foi realizada (R18), para os alunos que estão na turma desde aquela aula. As
+faltas contam a partir da entrada do aluno, com limite de 6 por etapa (R08). Só a presença já
+lançada é corrigida (R22)."""
 
 from datetime import date, datetime, time
 
 import pytest
 
 from plataforma.compartilhado.horario import BRASILIA
-from plataforma.modules.turmas.domain.etapa import aula_na_data, calendario
+from plataforma.modules.turmas.domain.etapa import Etapa, aula_na_data, calendario
 from plataforma.modules.turmas.domain.horario import DiaDaSemana, novo_horario
 from plataforma.modules.turmas.domain.presenca import (
     AulaAindaNaoComecou,
@@ -15,9 +16,12 @@ from plataforma.modules.turmas.domain.presenca import (
     Presenca,
     PresencaEmAulaNaoRealizada,
     PresencaJaLancada,
+    PresencaNaoLancada,
     alunos_da_aula,
+    exigir_aula_para_correcao,
     exigir_aula_para_presenca,
     faltas,
+    faltas_na_etapa,
     lancar,
     passou_do_limite,
 )
@@ -124,3 +128,40 @@ def test_r18_presenca_numa_data_fora_das_aulas_da_etapa_nao_conta() -> None:
     fora = [Presenca(ANA, date(2027, 4, 14), presente=False)]
 
     assert faltas(fora, AULAS, aula_de_entrada=1) == 0
+
+
+ETAPA = Etapa(TER_E_QUI_19H, 2, QUINTA_11_03_19H)
+
+
+def test_r08_na_etapa_as_faltas_do_aluno_contam_da_aula_em_que_ele_entrou() -> None:
+    lancadas = ausencias(ANA, 3, 5, 11, 12) + ausencias(BRUNO, 4)
+    # Na segunda 12/04, a turma já deu 9 aulas: Ana entra na 10ª.
+    segunda_12_04 = datetime(2027, 4, 12, 10, 0, tzinfo=BRASILIA)
+
+    assert faltas_na_etapa(ETAPA, ANA, segunda_12_04, lancadas) == 2
+
+
+def test_r08_quem_ja_estava_na_turma_antes_da_etapa_conta_as_faltas_desde_a_1a_aula() -> None:
+    lancadas = ausencias(ANA, 3, 5, 11, 12) + ausencias(BRUNO, 4)
+    antes_da_etapa = datetime(2027, 1, 5, 10, 0, tzinfo=BRASILIA)
+
+    assert faltas_na_etapa(ETAPA, ANA, antes_da_etapa, lancadas) == 4
+    assert faltas_na_etapa(ETAPA, BRUNO, antes_da_etapa, lancadas) == 1
+
+
+def test_r22_a_correcao_devolve_quando_a_presenca_foi_lancada() -> None:
+    lancada_em = datetime(2027, 3, 25, 20, 30, tzinfo=BRASILIA)
+
+    assert exigir_aula_para_correcao(aula_na_data(AULAS, QUINTA_25_03), lancada_em) == lancada_em
+
+
+def test_r22_so_a_presenca_ja_lancada_e_corrigida() -> None:
+    with pytest.raises(PresencaNaoLancada, match="A presença da 5ª aula ainda não foi lançada."):
+        exigir_aula_para_correcao(aula_na_data(AULAS, QUINTA_25_03), None)
+
+
+def test_r18_a_aula_nao_realizada_nao_tem_presenca_para_corrigir() -> None:
+    aulas = calendario(TER_E_QUI_19H, QUINTA_11_03_19H, {TERCA_13_04})
+
+    with pytest.raises(PresencaEmAulaNaoRealizada, match="A aula de 13/04/2027 não foi realizada"):
+        exigir_aula_para_correcao(aula_na_data(aulas, TERCA_13_04), None)

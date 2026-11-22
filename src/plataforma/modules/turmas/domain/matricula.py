@@ -48,12 +48,16 @@ class SemMatricula(Recusa):
 
 @dataclass(frozen=True)
 class Matricula:
-    """O aluno na turma desde matriculada_em. A aula de entrada sai das aulas dadas até ali."""
+    """O aluno na turma desde matriculada_em. A aula de entrada sai das aulas dadas até ali.
+
+    saiu_em é quando o aluno saiu da turma, por vontade própria (R29) ou por reprovação (R21).
+    """
 
     id: int
     turma_id: int
     aluno_id: int
     matriculada_em: datetime
+    saiu_em: datetime | None = None
 
 
 class SituacaoNaTurma(StrEnum):

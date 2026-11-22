@@ -52,6 +52,7 @@ from plataforma.modules.materias.infra.repositorio_de_materias import (
 )
 from plataforma.modules.nivelamento.application.casos_de_uso import CadastrarQuestao
 from plataforma.modules.nivelamento.application.consulta_de_niveis import ConsultaDeNiveis
+from plataforma.modules.nivelamento.application.promocao import Promocoes
 from plataforma.modules.nivelamento.domain.nivelamento import NivelDoAluno
 from plataforma.modules.nivelamento.infra.repositorio_de_nivelamentos import (
     RepositorioDeNivelamentosSqlite,
@@ -60,8 +61,10 @@ from plataforma.modules.nivelamento.infra.repositorio_de_questoes import (
     RepositorioDeQuestoesSqlite,
 )
 from plataforma.modules.turmas.application.casos_de_uso import CriarTurma
+from plataforma.modules.turmas.application.em_dia import TurmasEmDia
 from plataforma.modules.turmas.application.matricula import Matricular
 from plataforma.modules.turmas.application.presenca import LancarPresenca
+from plataforma.modules.turmas.application.prova_final import LancarNota
 from plataforma.modules.turmas.domain.horario import DiaDaSemana
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
 
@@ -187,6 +190,13 @@ class App:
                 criar_adm.executar(EMAIL_DO_ADM, SENHA_DO_ADM)
             yield conexao, em_transacao, Entrar(usuarios).executar(EMAIL_DO_ADM, SENHA_DO_ADM)
 
+    @staticmethod
+    def _em_dia(conexao: sqlite3.Connection) -> TurmasEmDia:
+        """O que põe as turmas em dia, que todo caso de uso das turmas recebe."""
+        materias = ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao))
+        promocoes = Promocoes(RepositorioDeNivelamentosSqlite(conexao), materias)
+        return TurmasEmDia(RepositorioDeTurmasSqlite(conexao), materias, promocoes)
+
     def preparar_materia(
         self, nome: str, notas_minimas: list[int], quantidade_de_questoes: int
     ) -> None:
@@ -245,6 +255,7 @@ class App:
                 professores,
                 self.relogio,
                 em_transacao,
+                self._em_dia(conexao),
             )
             turma = criar_turma.executar(adm, materia_id, nivel, professor_id, dias, inicio, fim)
             return turma.id
@@ -272,6 +283,7 @@ class App:
                 ConsultaDeNiveis(RepositorioDeNivelamentosSqlite(conexao)),
                 self.relogio,
                 em_transacao,
+                self._em_dia(conexao),
             )
             matricular.executar(aluno, turma_id)
 
@@ -281,16 +293,37 @@ class App:
         """Lança, antes de abrir o app, a presença de uma aula pelo ADM, que lança em qualquer
         turma (R10). A aula precisa ter começado no relógio do app."""
         with self._no_banco() as (conexao, em_transacao, adm):
-            usuarios = RepositorioDeUsuariosSqlite(conexao)
-            lancar = LancarPresenca(
-                RepositorioDeTurmasSqlite(conexao),
-                ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao)),
-                ConsultaDeProfessores(RepositorioDeProfessoresSqlite(conexao)),
-                ConsultaDeAlunos(usuarios),
-                self.relogio,
-                em_transacao,
-            )
+            lancar = LancarPresenca(*self._das_aulas(conexao, em_transacao))
             lancar.executar(adm, turma_id, data_da_aula, {aluno.id for aluno in ausentes})
+
+    def preparar_nota(self, turma_id: int, nivel: int, aluno: Usuario, nota: str) -> None:
+        """Lança, antes de abrir o app, a nota da prova final pelo ADM, que lança em qualquer
+        turma (R10). A etapa do nível precisa ter terminado no relógio do app."""
+        with self._no_banco() as (conexao, em_transacao, adm):
+            lancar = LancarNota(*self._das_aulas(conexao, em_transacao))
+            lancar.executar(adm, turma_id, nivel, aluno.id, nota)
+
+    def _das_aulas(
+        self, conexao: sqlite3.Connection, em_transacao: Transacao
+    ) -> tuple[
+        RepositorioDeTurmasSqlite,
+        ConsultaDeMaterias,
+        ConsultaDeProfessores,
+        ConsultaDeAlunos,
+        RelogioDoApp,
+        Transacao,
+        TurmasEmDia,
+    ]:
+        """As dependências dos casos de uso das aulas e da prova final."""
+        return (
+            RepositorioDeTurmasSqlite(conexao),
+            ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao)),
+            ConsultaDeProfessores(RepositorioDeProfessoresSqlite(conexao)),
+            ConsultaDeAlunos(RepositorioDeUsuariosSqlite(conexao)),
+            self.relogio,
+            em_transacao,
+            self._em_dia(conexao),
+        )
 
     def texto_do_log(self) -> str:
         return (self.pasta_de_dados / "logs" / "plataforma.log").read_text(encoding="utf-8")

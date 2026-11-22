@@ -1,6 +1,6 @@
 """Aba Turmas do aluno (H04, H05, H06, H13, H08): as turmas do nível dele, com a matrícula, a
 lista de espera, o aviso da vaga oferecida, a saída da turma e, nas turmas em que ele está, a
-aula da etapa e as faltas."""
+aula da etapa, as faltas e a prova final da última etapa que terminou."""
 
 from collections.abc import Callable
 
@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
 from plataforma.acoes import Falhou, Feito, executar
 from plataforma.compartilhado.dinheiro import formatar_reais
 from plataforma.modules.identidade.domain.usuario import Usuario
+from plataforma.modules.materias.domain.materia import nome_do_nivel
+from plataforma.modules.turmas.application.em_dia import SituacaoNaProvaFinal
 from plataforma.modules.turmas.application.matricula import (
     CasosDeUsoDaMatricula,
     MatriculaFeita,
@@ -29,6 +31,7 @@ from plataforma.modules.turmas.domain.etapa import AULAS_POR_ETAPA
 from plataforma.modules.turmas.domain.horario import descrever_horario, formatar_data_e_hora
 from plataforma.modules.turmas.domain.matricula import SituacaoNaTurma
 from plataforma.modules.turmas.domain.presenca import LIMITE_DE_FALTAS, passou_do_limite
+from plataforma.modules.turmas.domain.prova_final import ResultadoEtapa
 from plataforma.modules.turmas.ui.comum import descrever_etapa, nome_da_turma
 from plataforma.ui_comum import mostrar_aviso, mostrar_recusa, mostrar_sucesso, titulo
 
@@ -81,6 +84,27 @@ def descrever_faltas(faltas: int) -> str:
     return f"{faltas} de {LIMITE_DE_FALTAS} faltas permitidas"
 
 
+def descrever_prova_final(situacao: SituacaoNaProvaFinal | None) -> str:
+    """H08 e R49: a nota da última etapa que terminou e, até o fim das 72 horas de correção,
+    quando o resultado vale."""
+    if situacao is None:
+        return "—"
+    nivel = nome_do_nivel(situacao.nivel)
+    prova = situacao.prova
+    if prova is None:
+        return f"{nivel}: a nota ainda não foi lançada."
+    if (
+        prova.resultado_aplicado == ResultadoEtapa.APROVADO
+        and situacao.resultado == ResultadoEtapa.REPROVADO
+    ):
+        # R22: depois que o resultado valeu, a correção que reprova não tira a promoção.
+        return f"{nivel}: nota {prova.nota}. A sua promoção continua valendo."
+    texto = f"{nivel}: nota {prova.nota}, {situacao.resultado}"
+    if prova.resultado_aplicado is None:
+        return f"{texto}. Vale em {formatar_data_e_hora(prova.vale_em)}."
+    return f"{texto}."
+
+
 def _pagamento(feita: MatriculaFeita) -> str:
     return (
         f"Você pagou {formatar_reais(feita.valor_pago_em_centavos)}, e a próxima mensalidade "
@@ -119,8 +143,8 @@ class TelaTurmasDoAluno(QWidget):
         cabecalho.setStretchLastSection(True)
         self.mensagem = QLabel()
         self.mensagem.setWordWrap(True)
-        self.etapas = QTableWidget(0, 3)
-        self.etapas.setHorizontalHeaderLabels(["Turma", "Aula", "Faltas"])
+        self.etapas = QTableWidget(0, 4)
+        self.etapas.setHorizontalHeaderLabels(["Turma", "Aula", "Faltas", "Prova final"])
         self.etapas.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.etapas.verticalHeader().setVisible(False)
         self.etapas.setMaximumHeight(140)
@@ -189,7 +213,8 @@ class TelaTurmasDoAluno(QWidget):
             mostrar_aviso(self.mensagem, SEM_TURMAS)
 
     def _preencher_etapas(self, vistas: list[TurmaDoAluno]) -> None:
-        """H08: em cada turma em que o aluno está, a aula da etapa e as faltas dele (R08)."""
+        """H08: em cada turma em que o aluno está, a aula da etapa, as faltas dele (R08) e a
+        prova final da última etapa que terminou (R49)."""
         minhas = [vista for vista in vistas if vista.situacao == SituacaoNaTurma.MATRICULADO]
         self.etapas.setRowCount(len(minhas))
         for linha, vista in enumerate(minhas):
@@ -197,6 +222,7 @@ class TelaTurmasDoAluno(QWidget):
                 nome_da_turma(vista.resumo),
                 descrever_aula_da_etapa(vista.resumo.aulas_dadas),
                 descrever_faltas(vista.faltas or 0),
+                descrever_prova_final(vista.prova_final),
             ]
             for coluna, valor in enumerate(valores):
                 self.etapas.setItem(linha, coluna, QTableWidgetItem(valor))
