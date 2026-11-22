@@ -1,10 +1,8 @@
 """Tela do ADM para cadastrar professores e habilitá-los por matéria (H29, R11)."""
 
-from PySide6.QtWidgets import QComboBox, QTableWidget
-
 from plataforma.janela_principal import AreaDoAdm, JanelaPrincipal
 from plataforma.modules.identidade.ui.telas_do_adm import TelaProfessores
-from tests.e2e.conftest import EMAIL_DO_ADM, SENHA_DO_ADM, App
+from tests.e2e.conftest import EMAIL_DO_ADM, SENHA_DO_ADM, App, escolher, linhas
 
 
 def abrir_professores(app: App) -> tuple[JanelaPrincipal, AreaDoAdm, TelaProfessores]:
@@ -24,19 +22,6 @@ def cadastrar_professor(app: App, tela: TelaProfessores, email: str, senha: str)
     app.digitar(tela.email, email)
     app.digitar(tela.senha, senha)
     app.clicar(tela.botao_cadastrar)
-
-
-def escolher(combo: QComboBox, texto: str) -> None:
-    indice = combo.findText(texto)
-    assert indice >= 0, f"{texto} não está na lista"
-    combo.setCurrentIndex(indice)
-
-
-def linhas(tabela: QTableWidget) -> list[list[str]]:
-    return [
-        [tabela.item(linha, coluna).text() for coluna in range(tabela.columnCount())]
-        for linha in range(tabela.rowCount())
-    ]
 
 
 def test_o_adm_cadastra_dora_e_ela_entra_com_o_perfil_de_professor(app: App) -> None:

@@ -1,10 +1,8 @@
 """Telas do ADM (H27 e H28): cadastrar matérias e as questões do nivelamento."""
 
-from PySide6.QtWidgets import QTableWidget
-
 from plataforma.janela_principal import AreaDoAdm
 from plataforma.modules.materias.ui.telas import TelaMaterias
-from tests.e2e.conftest import App
+from tests.e2e.conftest import App, linhas
 
 ENUNCIADO = "Um carro anda 100 m em 25 s. Qual é a velocidade média?"
 ALTERNATIVAS = ["2 m/s", "4 m/s", "6 m/s", "8 m/s", "10 m/s"]
@@ -32,13 +30,6 @@ def cadastrar_materia(
         campo.setValue(nota_minima)
     tela.mensalidade.setValue(mensalidade_em_reais)
     app.clicar(tela.botao_cadastrar)
-
-
-def linhas(tabela: QTableWidget) -> list[list[str]]:
-    return [
-        [tabela.item(linha, coluna).text() for coluna in range(tabela.columnCount())]
-        for linha in range(tabela.rowCount())
-    ]
 
 
 def test_r40_r27_o_adm_cadastra_fisica_e_ve_as_faixas_e_a_mensalidade(app: App) -> None:

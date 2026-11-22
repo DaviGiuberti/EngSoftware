@@ -49,8 +49,8 @@ O ADM cria a turma e escolhe matéria, nível inicial (qualquer nível da matér
 R25
 Uma turma aberta não pode ser encerrada antes de concluir o nível máximo, nem se ficar sem alunos. (11.3, 12.2)
 
-R26
-O mesmo professor acompanha a turma do início ao fim. Ele só é trocado se sair ou for desligado. (1.1)
+R26 *(alterada)*
+O professor acompanha a turma quando ela passa de nível. O ADM pode trocar o professor da turma quando quiser, sem precisar de motivo; o novo professor precisa estar habilitado na matéria (R11) e não ter outra turma num horário que se sobreponha (R07). (1.1, H31)
 
 R11 *(alterada)*
 O ADM habilita o professor por matéria. Habilitado numa matéria, ele pode dar aula em todos os níveis dela. (2.4, 3.4)
@@ -77,6 +77,9 @@ Toda etapa tem 24 aulas, em todos os níveis e matérias. A etapa termina depois
 
 R18
 Aula que não acontece (feriado, professor doente) não conta nas 24: ela é reposta no fim da etapa, no mesmo horário. (10.4)
+
+R43
+A 1ª aula da turma é no primeiro dia dela depois da criação, no horário da turma. As aulas seguintes caem nos dias e no horário da turma, uma depois da outra, pulando as não realizadas (R18). A aula conta como dada quando começa, se não foi marcada como não realizada, e só a aula que já começou recebe presença. (H30, H22)
 
 R08 *(alterada)*
 Ao fim da etapa, o aluno sobe 1 nível se tiver no máximo 6 faltas (25% das 24 aulas) e nota ≥ 7 na prova final. As faltas contam só a partir da entrada do aluno na turma; as aulas anteriores contam como presença. (2.3, 3.2, 4.3)

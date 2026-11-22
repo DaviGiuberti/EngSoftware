@@ -753,13 +753,18 @@ Cenário: R11 — sem habilitação na matéria
 
 ### H30 · Criar turma
 
-Como ADM, quero criar uma turma com matéria, nível inicial, professor, dias e horário para oferecer aulas ao vivo. Prioridade: Alta. Regras: R04, R07, R11, R24.
+Como ADM, quero criar uma turma com matéria, nível inicial, professor, dias e horário para oferecer aulas ao vivo. Prioridade: Alta. Regras: R04, R07, R11, R24, R43.
 
 ```gherkin
 Cenário: R11 e R24 — turma nova com professor habilitado
   Dado o professor Carlos, habilitado em Física
   Quando o ADM cria uma turma de Física com nível inicial N2 e Carlos, às terças e quintas, das 19h às 20h30
   Então a turma é criada no N2, antes da 1ª aula da etapa, com 12 vagas
+
+Cenário: R43 — a 1ª aula é no primeiro dia da turma depois da criação
+  Dado o ADM na segunda-feira, 23/11, às 14h
+  Quando ele cria uma turma às terças e quintas, das 19h às 20h30
+  Então a 1ª aula da etapa é na terça-feira, 24/11, às 19h
 
 Cenário: R07 — conflito de horário do professor
   Dado o professor Carlos com uma turma às terças, das 19h às 20h30
@@ -779,17 +784,17 @@ Cenário: R24 — o horário não muda
 
 ### H31 · Trocar o professor de uma turma
 
-Como ADM, quero trocar o professor de uma turma quando ele sair ou for desligado para que a turma não fique sem responsável. Prioridade: Média. Regras: R07, R11, R26.
+Como ADM, quero trocar o professor de uma turma quando achar necessário, como quando ele sai ou é desligado, para que a turma nunca fique sem responsável. Prioridade: Média. Regras: R07, R11, R26.
 
 ```gherkin
-Cenário: R26 — troca quando o professor sai
-  Dada uma turma de Física do Carlos, que foi desligado
+Cenário: R26 — o ADM troca o professor quando quiser
+  Dada uma turma de Física do Carlos
   E a professora Dora, habilitada em Física e sem turma nesse horário
   Quando o ADM troca o professor da turma para Dora
   Então Dora passa a ser a professora da turma
 
 Cenário: R11 — o novo professor precisa estar habilitado
-  Dada uma turma de Física do Carlos, que foi desligado
+  Dada uma turma de Física do Carlos
   Quando o ADM tenta trocar para um professor habilitado só em Matemática
   Então o sistema recusa
 
@@ -1034,3 +1039,4 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R40 | H27 |
 | R41 | H28 |
 | R42 | H33 |
+| R43 | H30 |
