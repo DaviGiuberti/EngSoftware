@@ -1,0 +1,211 @@
+"""Aba Turmas do aluno (H04, H05, H06, H13): as turmas do nível dele, com a matrícula, a lista
+de espera, o aviso da vaga oferecida e a saída da turma."""
+
+from collections.abc import Callable
+
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QHeaderView,
+    QLabel,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+
+from plataforma.acoes import Falhou, Feito, executar
+from plataforma.compartilhado.dinheiro import formatar_reais
+from plataforma.modules.identidade.domain.usuario import Usuario
+from plataforma.modules.turmas.application.matricula import (
+    CasosDeUsoDaMatricula,
+    MatriculaFeita,
+    TurmaDoAluno,
+)
+from plataforma.modules.turmas.domain.horario import descrever_horario, formatar_data_e_hora
+from plataforma.modules.turmas.domain.matricula import SituacaoNaTurma
+from plataforma.modules.turmas.ui.comum import descrever_etapa, nome_da_turma
+from plataforma.ui_comum import mostrar_aviso, mostrar_recusa, mostrar_sucesso, titulo
+
+SEM_TURMAS = (
+    "Você ainda não tem turmas do seu nível. Faça o nivelamento em Meus níveis para ver as "
+    "turmas de cada matéria."
+)
+
+
+def descrever_situacao(vista: TurmaDoAluno) -> str:
+    """A situação do aluno na turma, como a coluna Situação mostra."""
+    prazo, vencimento = vista.prazo_para_confirmar, vista.proximo_vencimento
+    if vista.situacao == SituacaoNaTurma.MATRICULADO and vencimento is not None:
+        return f"Você está nesta turma. Próxima mensalidade: {vencimento:%d/%m/%Y}."
+    if vista.situacao == SituacaoNaTurma.VAGA_OFERECIDA and prazo is not None:
+        return f"Vaga para você até {formatar_data_e_hora(prazo)}."
+    if vista.situacao == SituacaoNaTurma.NA_LISTA:
+        return f"Lista de espera: {vista.posicao_na_lista}º lugar."
+    if vista.situacao == SituacaoNaTurma.COM_VAGA:
+        livres = vista.resumo.vagas_livres
+        return "1 vaga livre." if livres == 1 else f"{livres} vagas livres."
+    return "Turma cheia."
+
+
+def avisar_vaga(vista: TurmaDoAluno) -> str | None:
+    """H06: o aviso da vaga oferecida, com o prazo para confirmar (R05)."""
+    if vista.situacao != SituacaoNaTurma.VAGA_OFERECIDA or vista.prazo_para_confirmar is None:
+        return None
+    return (
+        f"Abriu uma vaga para você na turma de {nome_da_turma(vista.resumo)}, "
+        f"{descrever_horario(vista.resumo.horario)}. "
+        f"Confirme até {formatar_data_e_hora(vista.prazo_para_confirmar)}."
+    )
+
+
+def _pagamento(feita: MatriculaFeita) -> str:
+    return (
+        f"Você pagou {formatar_reais(feita.valor_pago_em_centavos)}, e a próxima mensalidade "
+        f"vence em {feita.proximo_vencimento:%d/%m/%Y}."
+    )
+
+
+class TelaTurmasDoAluno(QWidget):
+    # Quantas vagas oferecidas o aluno tem para confirmar, para o título da aba avisar.
+    avisos_mudaram = Signal(int)
+
+    def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUsoDaMatricula) -> None:
+        super().__init__()
+        self._usuario = usuario
+        self._casos_de_uso = casos_de_uso
+        self.botoes: dict[int, QPushButton] = {}
+        self.vagas_oferecidas = 0
+
+        self.avisos = QLabel()
+        self.avisos.setWordWrap(True)
+        self.avisos.setStyleSheet("background: #fff4c2; padding: 8px; font-weight: bold")
+        self.avisos.hide()
+        explicacao = QLabel(
+            "Aqui estão as suas turmas e as turmas do seu nível em cada matéria. A matrícula "
+            "paga a 1ª mensalidade, e as seguintes vencem todo mês no dia da matrícula."
+        )
+        explicacao.setWordWrap(True)
+        self.tabela = QTableWidget(0, 6)
+        self.tabela.setHorizontalHeaderLabels(
+            ["Turma", "Dias e horário", "Professor", "Etapa", "Situação", ""]
+        )
+        self.tabela.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.tabela.verticalHeader().setVisible(False)
+        cabecalho = self.tabela.horizontalHeader()
+        cabecalho.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        cabecalho.setStretchLastSection(True)
+        self.mensagem = QLabel()
+        self.mensagem.setWordWrap(True)
+
+        coluna = QVBoxLayout(self)
+        coluna.addWidget(titulo("Turmas"))
+        coluna.addWidget(self.avisos)
+        coluna.addWidget(explicacao)
+        coluna.addWidget(self.tabela, 1)
+        coluna.addWidget(self.mensagem)
+        self.recarregar()
+
+    def recarregar(self) -> None:
+        """Lê de novo as turmas, como depois de o aluno fazer o nivelamento."""
+        self.mensagem.clear()
+        resultado = executar(
+            "ver turmas do seu nível",
+            self._usuario.email,
+            lambda: self._casos_de_uso.ver_turmas_do_aluno.executar(self._usuario),
+        )
+        match resultado:
+            case Feito(vistas):
+                self._preencher(vistas)
+            case Falhou(mensagem):
+                mostrar_recusa(self.mensagem, mensagem)
+
+    def _preencher(self, vistas: list[TurmaDoAluno]) -> None:
+        # Zerar as linhas também apaga os botões que estavam nelas.
+        self.tabela.setRowCount(0)
+        self.tabela.setRowCount(len(vistas))
+        self.botoes = {}
+        for linha, vista in enumerate(vistas):
+            resumo = vista.resumo
+            valores = [
+                nome_da_turma(resumo),
+                descrever_horario(resumo.horario),
+                resumo.email_do_professor,
+                descrever_etapa(resumo),
+                descrever_situacao(vista),
+            ]
+            for coluna, valor in enumerate(valores):
+                self.tabela.setItem(linha, coluna, QTableWidgetItem(valor))
+            acao = self._acao(vista)
+            if acao is None:
+                self.tabela.setItem(linha, 5, QTableWidgetItem(""))
+            else:
+                texto, fazer = acao
+                botao = QPushButton(texto)
+                botao.clicked.connect(fazer)
+                self.tabela.setCellWidget(linha, 5, botao)
+                self.botoes[resumo.id] = botao
+        avisos = [aviso for vista in vistas if (aviso := avisar_vaga(vista)) is not None]
+        self.avisos.setText("\n".join(avisos))
+        self.avisos.setVisible(bool(avisos))
+        self.vagas_oferecidas = len(avisos)
+        self.avisos_mudaram.emit(self.vagas_oferecidas)
+        if not vistas:
+            mostrar_aviso(self.mensagem, SEM_TURMAS)
+
+    def _acao(self, vista: TurmaDoAluno) -> tuple[str, Callable[[], None]] | None:
+        """O botão de cada situação: o texto e o que ele faz."""
+        valor = formatar_reais(vista.mensalidade_em_centavos)
+        match vista.situacao:
+            case SituacaoNaTurma.MATRICULADO:
+                return "Sair da turma", lambda: self._sair(vista)
+            case SituacaoNaTurma.VAGA_OFERECIDA:
+                return f"Confirmar e pagar {valor}", lambda: self._confirmar(vista)
+            case SituacaoNaTurma.COM_VAGA:
+                return f"Matricular-se e pagar {valor}", lambda: self._matricular(vista)
+            case SituacaoNaTurma.CHEIA:
+                return "Entrar na lista de espera", lambda: self._entrar_na_lista(vista)
+            case _:
+                return None
+
+    def _matricular(self, vista: TurmaDoAluno) -> None:
+        nome = nome_da_turma(vista.resumo)
+        self._fazer(
+            "se matricular numa turma",
+            lambda: self._casos_de_uso.matricular.executar(self._usuario, vista.resumo.id),
+            lambda feita: f"Matrícula feita na turma de {nome}. {_pagamento(feita)}",
+        )
+
+    def _confirmar(self, vista: TurmaDoAluno) -> None:
+        nome = nome_da_turma(vista.resumo)
+        self._fazer(
+            "confirmar a vaga",
+            lambda: self._casos_de_uso.confirmar_vaga.executar(self._usuario, vista.resumo.id),
+            lambda feita: f"Vaga confirmada: você está na turma de {nome}. {_pagamento(feita)}",
+        )
+
+    def _entrar_na_lista(self, vista: TurmaDoAluno) -> None:
+        nome = nome_da_turma(vista.resumo)
+        self._fazer(
+            "entrar na lista de espera",
+            lambda: self._casos_de_uso.entrar_na_lista.executar(self._usuario, vista.resumo.id),
+            lambda lugar: f"Você entrou na lista de espera da turma de {nome}, em {lugar}º lugar.",
+        )
+
+    def _sair(self, vista: TurmaDoAluno) -> None:
+        nome = nome_da_turma(vista.resumo)
+        self._fazer(
+            "sair da turma",
+            lambda: self._casos_de_uso.sair_da_turma.executar(self._usuario, vista.resumo.id),
+            lambda _: f"Você saiu da turma de {nome}. A mensalidade já paga não é devolvida.",
+        )
+
+    def _fazer[T](self, acao: str, funcao: Callable[[], T], sucesso: Callable[[T], str]) -> None:
+        """Roda a ação; se der certo, lê as turmas de novo e mostra o resultado."""
+        match executar(acao, self._usuario.email, funcao):
+            case Feito(valor):
+                self.recarregar()
+                mostrar_sucesso(self.mensagem, sucesso(valor))
+            case Falhou(mensagem):
+                mostrar_recusa(self.mensagem, mensagem)

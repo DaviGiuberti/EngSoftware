@@ -1,16 +1,9 @@
 """Textos das turmas que mais de uma tela mostra."""
 
-from datetime import datetime
-
 from plataforma.modules.materias.domain.materia import nome_do_nivel
 from plataforma.modules.turmas.application.casos_de_uso import ResumoDaTurma
 from plataforma.modules.turmas.domain.etapa import AULAS_POR_ETAPA
-from plataforma.modules.turmas.domain.horario import formatar_hora
-
-
-def formatar_data_e_hora(momento: datetime) -> str:
-    """O início de uma aula: "24/11/2026, às 19h"."""
-    return f"{momento:%d/%m/%Y}, às {formatar_hora(momento.time())}"
+from plataforma.modules.turmas.domain.horario import formatar_data_e_hora
 
 
 def nome_da_turma(resumo: ResumoDaTurma) -> str:
