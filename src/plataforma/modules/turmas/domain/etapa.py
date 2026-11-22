@@ -1,12 +1,39 @@
-"""Calendário da etapa: 24 aulas (R17), a partir da 1ª, nos dias e no horário da turma (R43)."""
+"""Calendário da etapa: 24 aulas (R17), a partir da 1ª, nos dias e no horário da turma (R43). A
+aula não realizada não conta nas 24 e é reposta no fim da etapa (R18). Só a aula ainda sem
+presença pode ser marcada como não realizada, passada ou futura (R48)."""
 
-from collections.abc import Iterator
-from datetime import datetime, timedelta
-from itertools import islice, takewhile
+from collections.abc import Collection, Iterator, Sequence
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 
+from plataforma.compartilhado.recusa import Recusa
 from plataforma.modules.turmas.domain.horario import Horario
 
 AULAS_POR_ETAPA = 24
+
+
+class SemAulaNaData(Recusa):
+    """A mensagem diz a data em que a etapa não tem aula."""
+
+
+class JaNaoRealizada(Recusa):
+    """A mensagem diz a data da aula."""
+
+
+class AulaComPresenca(Recusa):
+    """R48: a mensagem diz que a aula aconteceu."""
+
+
+@dataclass(frozen=True)
+class AulaDaEtapa:
+    """Uma data de aula da etapa. A não realizada não tem número: não conta nas 24 (R18)."""
+
+    inicio: datetime
+    numero: int | None
+
+    @property
+    def data(self) -> date:
+        return self.inicio.date()
 
 
 def primeira_aula_depois(horario: Horario, momento: datetime) -> datetime:
@@ -34,7 +61,68 @@ def datas_das_aulas(horario: Horario, inicio_da_etapa: datetime) -> Iterator[dat
         data += timedelta(days=1)
 
 
-def aulas_dadas(horario: Horario, inicio_da_etapa: datetime, agora: datetime) -> int:
-    """R43: quantas aulas da etapa já começaram. Depois da 24ª, a contagem para (R17)."""
-    aulas_da_etapa = islice(datas_das_aulas(horario, inicio_da_etapa), AULAS_POR_ETAPA)
-    return sum(1 for _ in takewhile(lambda inicio: inicio <= agora, aulas_da_etapa))
+def calendario(
+    horario: Horario, inicio_da_etapa: datetime, nao_realizadas: Collection[date] = frozenset()
+) -> list[AulaDaEtapa]:
+    """R43 e R18: as aulas da etapa, da 1ª à 24ª, com as não realizadas no meio, sem número.
+
+    Cada não realizada empurra o fim da etapa para o próximo dia da turma, no mesmo horário.
+    """
+    aulas: list[AulaDaEtapa] = []
+    dadas = 0
+    datas = datas_das_aulas(horario, inicio_da_etapa)
+    while dadas < AULAS_POR_ETAPA:
+        inicio = next(datas)
+        if inicio.date() in nao_realizadas:
+            aulas.append(AulaDaEtapa(inicio, None))
+        else:
+            dadas += 1
+            aulas.append(AulaDaEtapa(inicio, dadas))
+    return aulas
+
+
+def aulas_dadas(
+    horario: Horario,
+    inicio_da_etapa: datetime,
+    agora: datetime,
+    nao_realizadas: Collection[date] = frozenset(),
+) -> int:
+    """R43: quantas aulas da etapa já começaram, sem as não realizadas (R18). Para na 24ª (R17)."""
+    return sum(
+        1
+        for aula in calendario(horario, inicio_da_etapa, nao_realizadas)
+        if aula.numero is not None and aula.inicio <= agora
+    )
+
+
+def proxima_aula(aulas: Sequence[AulaDaEtapa], agora: datetime) -> AulaDaEtapa | None:
+    """A próxima aula realizada da etapa depois de agora, ou None se a etapa já deu as 24."""
+    return next((a for a in aulas if a.numero is not None and a.inicio > agora), None)
+
+
+def aula_na_data(aulas: Sequence[AulaDaEtapa], data: date) -> AulaDaEtapa:
+    aula = next((aula for aula in aulas if aula.data == data), None)
+    if aula is None:
+        raise SemAulaNaData(f"A etapa não tem aula em {data:%d/%m/%Y}.")
+    return aula
+
+
+def marcar_nao_realizada(
+    aulas: Sequence[AulaDaEtapa],
+    nao_realizadas: frozenset[date],
+    data: date,
+    datas_com_presenca: Collection[date],
+) -> frozenset[date]:
+    """R18 e R48: a aula ainda sem presença, passada ou futura, sai das 24 e é reposta no fim.
+
+    A aula com presença lançada aconteceu e não pode ser marcada.
+    """
+    aula = aula_na_data(aulas, data)
+    if aula.numero is None:
+        raise JaNaoRealizada(f"A aula de {data:%d/%m/%Y} já está marcada como não realizada.")
+    if data in datas_com_presenca:
+        raise AulaComPresenca(
+            f"A {aula.numero}ª aula, de {data:%d/%m/%Y}, já tem presença lançada: ela aconteceu "
+            "e não pode ser marcada como não realizada."
+        )
+    return nao_realizadas | {data}
