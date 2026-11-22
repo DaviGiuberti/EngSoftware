@@ -12,6 +12,7 @@ import pytest
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtWidgets import (
     QAbstractButton,
+    QApplication,
     QCheckBox,
     QComboBox,
     QLineEdit,
@@ -27,6 +28,7 @@ from plataforma.compartilhado.transacao import Transacao
 from plataforma.janela_principal import JanelaPrincipal
 from plataforma.main import criar_janela
 from plataforma.modules.identidade.application.casos_de_uso import (
+    CadastrarAluno,
     CadastrarProfessor,
     ConsultaDeProfessores,
     CriarPrimeiroAdm,
@@ -48,10 +50,16 @@ from plataforma.modules.materias.infra.repositorio_de_materias import (
     RepositorioDeMateriasSqlite,
 )
 from plataforma.modules.nivelamento.application.casos_de_uso import CadastrarQuestao
+from plataforma.modules.nivelamento.application.consulta_de_niveis import ConsultaDeNiveis
+from plataforma.modules.nivelamento.domain.nivelamento import NivelDoAluno
+from plataforma.modules.nivelamento.infra.repositorio_de_nivelamentos import (
+    RepositorioDeNivelamentosSqlite,
+)
 from plataforma.modules.nivelamento.infra.repositorio_de_questoes import (
     RepositorioDeQuestoesSqlite,
 )
 from plataforma.modules.turmas.application.casos_de_uso import CriarTurma
+from plataforma.modules.turmas.application.matricula import Matricular
 from plataforma.modules.turmas.domain.horario import DiaDaSemana
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
 
@@ -62,6 +70,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 EMAIL_DO_ADM = "adm@exemplo.com"
 SENHA_DO_ADM = "admin123"
 SENHA_DOS_PROFESSORES = "abcd1234"
+SENHA_DOS_ALUNOS = "abcd1234"
 
 
 def escolher(combo: QComboBox, texto: str) -> None:
@@ -132,7 +141,12 @@ class App:
 
         Num botão de marcar, isso é a bolinha, à esquerda: quando ele ocupa a largura toda da
         tela, o centro cai fora da área que reage ao clique.
+
+        Antes, o Qt termina o que deixou para o laço de eventos: um botão que acabou de ser
+        posto numa tabela só ganha tamanho ali, e sem tamanho ele não reage ao clique. Quem usa
+        o app nunca clica antes disso.
         """
+        QApplication.processEvents()
         if isinstance(botao, QRadioButton | QCheckBox):
             na_bolinha = QPoint(8, botao.height() // 2)
             self._qtbot.mouseClick(botao, Qt.MouseButton.LeftButton, pos=na_bolinha)
@@ -211,8 +225,11 @@ class App:
         dias: Sequence[DiaDaSemana],
         inicio: time,
         fim: time,
-    ) -> None:
-        """Cria a turma antes de abrir o app, na hora em que o relógio do app está."""
+    ) -> int:
+        """Cria a turma antes de abrir o app, na hora em que o relógio do app está.
+
+        Devolve o id da turma.
+        """
         with self._no_banco() as (conexao, em_transacao, adm):
             materias = ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao))
             professores = ConsultaDeProfessores(RepositorioDeProfessoresSqlite(conexao))
@@ -227,7 +244,34 @@ class App:
                 self.relogio,
                 em_transacao,
             )
-            criar_turma.executar(adm, materia_id, nivel, professor_id, dias, inicio, fim)
+            turma = criar_turma.executar(adm, materia_id, nivel, professor_id, dias, inicio, fim)
+            return turma.id
+
+    def preparar_aluno(self, email: str, niveis: dict[str, int] | None = None) -> Usuario:
+        """Cadastra, antes de abrir o app, um aluno com nível nas matérias com esses nomes, como
+        se ele tivesse feito o nivelamento."""
+        with self._no_banco() as (conexao, em_transacao, _):
+            usuarios = RepositorioDeUsuariosSqlite(conexao)
+            aluno = CadastrarAluno(usuarios, em_transacao).executar(email, SENHA_DOS_ALUNOS)
+            materias = ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao))
+            ids = {materia.nome: materia.id for materia in materias.listar()}
+            nivelamentos = RepositorioDeNivelamentosSqlite(conexao)
+            for nome, nivel in (niveis or {}).items():
+                nivelamentos.salvar_nivel(aluno.id, NivelDoAluno(ids[nome], nivel))
+            return aluno
+
+    def preparar_matricula(self, aluno: Usuario, turma_id: int) -> None:
+        """Matricula o aluno na turma antes de abrir o app, na hora do relógio do app."""
+        with self._no_banco() as (conexao, em_transacao, _):
+            matricular = Matricular(
+                RepositorioDeTurmasSqlite(conexao),
+                ConsultaDeMaterias(RepositorioDeMateriasSqlite(conexao)),
+                ConsultaDeProfessores(RepositorioDeProfessoresSqlite(conexao)),
+                ConsultaDeNiveis(RepositorioDeNivelamentosSqlite(conexao)),
+                self.relogio,
+                em_transacao,
+            )
+            matricular.executar(aluno, turma_id)
 
     def texto_do_log(self) -> str:
         return (self.pasta_de_dados / "logs" / "plataforma.log").read_text(encoding="utf-8")

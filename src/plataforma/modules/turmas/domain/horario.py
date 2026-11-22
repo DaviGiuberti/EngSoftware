@@ -3,7 +3,7 @@ e horários que se sobrepõem (R07)."""
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import time
+from datetime import datetime, time
 from enum import IntEnum
 
 from plataforma.compartilhado.recusa import Recusa
@@ -78,6 +78,11 @@ def horario_em_conflito(horario: Horario, ocupados: Iterable[Horario]) -> Horari
 def formatar_hora(hora: time) -> str:
     """19h00 vira "19h", e 20h30 vira "20h30"."""
     return f"{hora.hour}h" if hora.minute == 0 else f"{hora.hour}h{hora.minute:02d}"
+
+
+def formatar_data_e_hora(momento: datetime) -> str:
+    """Um momento como as mensagens mostram: "24/11/2026, às 19h"."""
+    return f"{momento:%d/%m/%Y}, às {formatar_hora(momento.time())}"
 
 
 def descrever_horario(horario: Horario) -> str:

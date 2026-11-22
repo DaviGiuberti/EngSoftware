@@ -31,7 +31,9 @@ from plataforma.modules.nivelamento.application.casos_de_uso import CasosDeUsoDo
 from plataforma.modules.nivelamento.ui.telas import TelaExcecoes, TelaQuestoes
 from plataforma.modules.nivelamento.ui.telas_do_aluno import AreaDoAluno
 from plataforma.modules.turmas.application.casos_de_uso import CasosDeUsoDeTurmas
+from plataforma.modules.turmas.application.matricula import CasosDeUsoDaMatricula
 from plataforma.modules.turmas.ui.telas import TelaTurmas
+from plataforma.modules.turmas.ui.telas_do_aluno import TelaTurmasDoAluno
 from plataforma.modules.turmas.ui.telas_do_professor import TelaMinhasTurmas
 
 
@@ -43,6 +45,40 @@ class CasosDeUso:
     materias: CasosDeUsoDeMaterias
     nivelamento: CasosDeUsoDoNivelamento
     turmas: CasosDeUsoDeTurmas
+    matricula: CasosDeUsoDaMatricula
+
+
+class AbasDoAluno(QTabWidget):
+    """Abas do aluno: o nível em cada matéria, com o nivelamento, e as turmas do nível dele."""
+
+    def __init__(self, usuario: Usuario, casos_de_uso: CasosDeUso) -> None:
+        super().__init__()
+        self.nivelamento = AreaDoAluno(usuario, casos_de_uso.nivelamento)
+        self.turmas = TelaTurmasDoAluno(usuario, casos_de_uso.matricula)
+        self.addTab(self.nivelamento, "Meus níveis")
+        self.addTab(self.turmas, "Turmas")
+        self.turmas.avisos_mudaram.connect(self._avisar_no_titulo)
+        self.currentChanged.connect(self._ao_trocar_de_aba)
+        # A aba Turmas leu as turmas ao ser criada, antes de o sinal estar ligado.
+        self._avisar_no_titulo(self.turmas.vagas_oferecidas)
+
+    def ao_sair(self) -> None:
+        self.nivelamento.ao_sair()
+
+    def _ao_trocar_de_aba(self, _indice: int) -> None:
+        # O nivelamento pode ter mudado o nível do aluno: a aba Turmas lê tudo de novo.
+        if self.currentWidget() is self.turmas:
+            self.turmas.recarregar()
+
+    def _avisar_no_titulo(self, vagas_oferecidas: int) -> None:
+        """H06: o aluno vê a vaga oferecida sem precisar abrir a aba Turmas."""
+        if vagas_oferecidas == 0:
+            titulo = "Turmas"
+        elif vagas_oferecidas == 1:
+            titulo = "Turmas · 1 vaga para você"
+        else:
+            titulo = f"Turmas · {vagas_oferecidas} vagas para você"
+        self.setTabText(self.indexOf(self.turmas), titulo)
 
 
 class AreaDoAdm(QTabWidget):
@@ -175,13 +211,13 @@ class JanelaPrincipal(QMainWindow):
         if usuario.perfil == Perfil.ADM:
             return AreaDoAdm(usuario, self._casos_de_uso)
         if usuario.perfil == Perfil.ALUNO:
-            return AreaDoAluno(usuario, self._casos_de_uso.nivelamento)
+            return AbasDoAluno(usuario, self._casos_de_uso)
         return TelaMinhasTurmas(usuario, self._casos_de_uso.turmas)
 
     def _encerrar_area(self) -> None:
         """Quem sai no meio do nivelamento tem o tempo parado antes de a conexão fechar."""
         area = self.tela_inicio.area
-        if isinstance(area, AreaDoAluno):
+        if isinstance(area, AbasDoAluno):
             area.ao_sair()
 
     def _sair(self) -> None:

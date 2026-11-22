@@ -1,9 +1,9 @@
 """Telas do nivelamento (H01, H02, H03, H33): o aluno faz o teste e vê o nível, e o ADM abre
 exceções."""
 
-from PySide6.QtWidgets import QPushButton, QTabWidget
+from PySide6.QtWidgets import QPushButton
 
-from plataforma.janela_principal import AreaDoAdm, JanelaPrincipal
+from plataforma.janela_principal import AbasDoAluno, AreaDoAdm, JanelaPrincipal
 from plataforma.modules.nivelamento.ui.telas_do_aluno import (
     AreaDoAluno,
     TelaDoNivelamento,
@@ -17,10 +17,11 @@ ERRADA = 0
 
 
 def entrar_como_ana(app: App, janela: JanelaPrincipal) -> AreaDoAluno:
+    """Cadastra a Ana e devolve a aba "Meus níveis" da área dela."""
     app.cadastrar_aluno(janela, "ana@exemplo.com", "abcd1234")
-    area = janela.tela_inicio.area
-    assert isinstance(area, AreaDoAluno)
-    return area
+    abas = janela.tela_inicio.area
+    assert isinstance(abas, AbasDoAluno)
+    return abas.nivelamento
 
 
 def linhas(tela: TelaMeusNiveis) -> list[tuple[str, str, str]]:
@@ -138,9 +139,9 @@ def test_h33_o_adm_libera_refazer_e_o_aluno_ve_a_opcao_no_perfil(app: App) -> No
     )
     app.clicar(janela.tela_inicio.botao_sair)
     app.entrar(janela, "ana@exemplo.com", "abcd1234")
-    area = janela.tela_inicio.area
-    assert isinstance(area, AreaDoAluno)
-    assert linhas(area.tela_meus_niveis) == [("Física", "N1", "Refazer nivelamento")]
+    abas = janela.tela_inicio.area
+    assert isinstance(abas, AbasDoAluno)
+    assert linhas(abas.nivelamento.tela_meus_niveis) == [("Física", "N1", "Refazer nivelamento")]
     # As abas do ADM que saiu não podem continuar desenhadas por baixo da tela da Ana.
-    abas = janela.tela_inicio.findChildren(QTabWidget)
-    assert [aba for aba in abas if aba.isVisible()] == []
+    areas_do_adm = janela.tela_inicio.findChildren(AreaDoAdm)
+    assert [area for area in areas_do_adm if area.isVisible()] == []

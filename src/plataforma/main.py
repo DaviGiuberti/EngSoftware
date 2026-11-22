@@ -46,6 +46,7 @@ from plataforma.modules.nivelamento.application.casos_de_uso import (
     CasosDeUsoDoNivelamento,
     ListarQuestoes,
 )
+from plataforma.modules.nivelamento.application.consulta_de_niveis import ConsultaDeNiveis
 from plataforma.modules.nivelamento.application.fazer_nivelamento import (
     ConcluirNivelamento,
     DarMaisTempo,
@@ -69,6 +70,14 @@ from plataforma.modules.turmas.application.casos_de_uso import (
     TrocarProfessor,
     VerMinhasTurmas,
     VerTurmas,
+)
+from plataforma.modules.turmas.application.matricula import (
+    CasosDeUsoDaMatricula,
+    ConfirmarVaga,
+    EntrarNaListaDeEspera,
+    Matricular,
+    SairDaTurma,
+    VerTurmasDoAluno,
 )
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
 from plataforma.relogio import RelogioDoSistema
@@ -104,6 +113,15 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
     do_aluno = (nivelamentos, questoes, consulta_de_materias, relogio, em_transacao)
     turmas = RepositorioDeTurmasSqlite(conexao)
     leitura_das_turmas = (turmas, consulta_de_materias, consulta_de_professores, relogio)
+    niveis = ConsultaDeNiveis(nivelamentos)
+    do_aluno_nas_turmas = (
+        turmas,
+        consulta_de_materias,
+        consulta_de_professores,
+        niveis,
+        relogio,
+        em_transacao,
+    )
     casos_de_uso = CasosDeUso(
         identidade=CasosDeUsoDaIdentidade(
             cadastrar_aluno=CadastrarAluno(usuarios, em_transacao),
@@ -145,6 +163,13 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
             mudar_horario=MudarHorario(turmas),
             ver_turmas=VerTurmas(*leitura_das_turmas),
             ver_minhas_turmas=VerMinhasTurmas(*leitura_das_turmas),
+        ),
+        matricula=CasosDeUsoDaMatricula(
+            ver_turmas_do_aluno=VerTurmasDoAluno(*do_aluno_nas_turmas),
+            matricular=Matricular(*do_aluno_nas_turmas),
+            entrar_na_lista=EntrarNaListaDeEspera(*do_aluno_nas_turmas),
+            confirmar_vaga=ConfirmarVaga(*do_aluno_nas_turmas),
+            sair_da_turma=SairDaTurma(*do_aluno_nas_turmas),
         ),
     )
 

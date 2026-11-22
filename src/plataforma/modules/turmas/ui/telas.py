@@ -36,12 +36,9 @@ from plataforma.modules.turmas.domain.horario import (
     DiaDaSemana,
     Horario,
     descrever_horario,
-)
-from plataforma.modules.turmas.ui.comum import (
-    descrever_etapa,
     formatar_data_e_hora,
-    nome_da_turma,
 )
+from plataforma.modules.turmas.ui.comum import descrever_etapa, nome_da_turma
 from plataforma.ui_comum import mostrar_aviso, mostrar_recusa, mostrar_sucesso, titulo
 
 DIA_ABREVIADO = {

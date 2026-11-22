@@ -1,14 +1,27 @@
-"""Turmas no SQLite, na tabela turma da migração 0007.
+"""Turmas no SQLite: a tabela turma da migração 0007 e, da 0008, as matrículas, as
+mensalidades pagas e as listas de espera.
 
-Todo SQL usa parâmetros (RNF08). O início da etapa vai como texto ISO 8601, com o fuso.
+Todo SQL usa parâmetros (RNF08). Datas e horas vão como texto ISO 8601, com o fuso.
 """
 
 import sqlite3
-from datetime import datetime, time
+from datetime import date, datetime, time
 from typing import Any
 
 from plataforma.modules.turmas.domain.horario import DiaDaSemana, Horario
+from plataforma.modules.turmas.domain.lista_de_espera import ListaDeEspera, NaLista
+from plataforma.modules.turmas.domain.matricula import Matricula
+from plataforma.modules.turmas.domain.mensalidade import Mensalidade
 from plataforma.modules.turmas.domain.turma import Turma, TurmaNova
+
+# Cada filtro NULL deixa passar todas as matrículas ativas.
+_MATRICULAS_ATIVAS = (
+    "SELECT id, turma_id, aluno_id, matriculada_em FROM matricula "
+    "WHERE saiu_em IS NULL "
+    "AND (:turma_id IS NULL OR turma_id = :turma_id) "
+    "AND (:aluno_id IS NULL OR aluno_id = :aluno_id) "
+    "ORDER BY id"
+)
 
 # Cada filtro NULL deixa passar todas as turmas: sem filtro, a consulta traz todas.
 _TURMAS = (
@@ -67,6 +80,97 @@ class RepositorioDeTurmasSqlite:
         self._conexao.execute(
             "UPDATE turma SET professor_id = ? WHERE id = ?", (turma.professor_id, turma.id)
         )
+
+    def adicionar_matricula(
+        self, turma_id: int, aluno_id: int, matriculada_em: datetime, primeira: Mensalidade
+    ) -> Matricula:
+        (matricula_id,) = self._conexao.execute(
+            "INSERT INTO matricula (turma_id, aluno_id, matriculada_em) VALUES (?, ?, ?) "
+            "RETURNING id",
+            (turma_id, aluno_id, matriculada_em.isoformat()),
+        ).fetchone()
+        self._conexao.execute(
+            "INSERT INTO mensalidade (matricula_id, vencimento, valor_em_centavos, paga_em) "
+            "VALUES (?, ?, ?, ?)",
+            (
+                matricula_id,
+                primeira.vencimento.isoformat(),
+                primeira.valor_em_centavos,
+                primeira.paga_em.isoformat(),
+            ),
+        )
+        return Matricula(matricula_id, turma_id, aluno_id, matriculada_em)
+
+    def matriculas_da_turma(self, turma_id: int) -> list[Matricula]:
+        return self._matriculas(turma_id=turma_id)
+
+    def matriculas_do_aluno(self, aluno_id: int) -> list[Matricula]:
+        return self._matriculas(aluno_id=aluno_id)
+
+    def encerrar_matricula(self, matricula_id: int, saiu_em: datetime) -> None:
+        self._conexao.execute(
+            "UPDATE matricula SET saiu_em = ? WHERE id = ?", (saiu_em.isoformat(), matricula_id)
+        )
+
+    def mensalidades(self, matricula_id: int) -> list[Mensalidade]:
+        linhas = self._conexao.execute(
+            "SELECT vencimento, valor_em_centavos, paga_em FROM mensalidade "
+            "WHERE matricula_id = ? ORDER BY vencimento",
+            (matricula_id,),
+        ).fetchall()
+        return [
+            Mensalidade(date.fromisoformat(vencimento), valor, datetime.fromisoformat(paga_em))
+            for vencimento, valor, paga_em in linhas
+        ]
+
+    def lista_de_espera(self, turma_id: int) -> ListaDeEspera:
+        linhas = self._conexao.execute(
+            "SELECT aluno_id, entrou_em, prazo FROM lista_de_espera WHERE turma_id = ? "
+            "ORDER BY entrou_em, rowid",
+            (turma_id,),
+        ).fetchall()
+        return tuple(
+            NaLista(
+                aluno_id,
+                datetime.fromisoformat(entrou_em),
+                None if prazo is None else datetime.fromisoformat(prazo),
+            )
+            for aluno_id, entrou_em, prazo in linhas
+        )
+
+    def salvar_lista_de_espera(self, turma_id: int, lista: ListaDeEspera) -> None:
+        self._conexao.execute("DELETE FROM lista_de_espera WHERE turma_id = ?", (turma_id,))
+        self._conexao.executemany(
+            "INSERT INTO lista_de_espera (turma_id, aluno_id, entrou_em, prazo) "
+            "VALUES (?, ?, ?, ?)",
+            [
+                (
+                    turma_id,
+                    na_lista.aluno_id,
+                    na_lista.entrou_em.isoformat(),
+                    None if na_lista.prazo is None else na_lista.prazo.isoformat(),
+                )
+                for na_lista in lista
+            ],
+        )
+
+    def turmas_com_o_aluno_na_lista(self, aluno_id: int) -> list[int]:
+        linhas = self._conexao.execute(
+            "SELECT turma_id FROM lista_de_espera WHERE aluno_id = ? ORDER BY turma_id",
+            (aluno_id,),
+        ).fetchall()
+        return [turma_id for (turma_id,) in linhas]
+
+    def _matriculas(
+        self, turma_id: int | None = None, aluno_id: int | None = None
+    ) -> list[Matricula]:
+        linhas = self._conexao.execute(
+            _MATRICULAS_ATIVAS, {"turma_id": turma_id, "aluno_id": aluno_id}
+        ).fetchall()
+        return [
+            Matricula(matricula_id, id_da_turma, id_do_aluno, datetime.fromisoformat(em))
+            for matricula_id, id_da_turma, id_do_aluno, em in linhas
+        ]
 
     def _ler(self, turma_id: int | None = None, professor_id: int | None = None) -> list[Turma]:
         linhas = self._conexao.execute(
