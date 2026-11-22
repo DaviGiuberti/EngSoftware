@@ -190,8 +190,11 @@ O acesso do pacote vale até as 23h59 do dia da compra, 12 meses depois; na vira
 R61
 O aluno assiste à aula gravada no navegador, pelo link do YouTube, e só com o acesso ativo ao pacote (R12). (H16)
 
-R62
-Com o acesso ativo, o aluno marca a aula gravada como concluída. A marcação fica guardada com a data e não é desfeita, e marcar de novo a mesma aula é recusado. (H16)
+R62 *(alterada)*
+Com o acesso ativo, o aluno marca a aula gravada como concluída. A marcação fica guardada com a data, o aluno não a desfaz, e marcar de novo a mesma aula é recusado. Só o reembolso do pacote apaga as aulas concluídas dele (R63). (H16, H17)
+
+R63
+O reembolso aceito encerra o acesso ao pacote na hora, apaga as aulas que o aluno concluiu nele e tira o pacote de "Meus pacotes". O aluno pode comprá-lo de novo na vitrine, e essa compra não dá direito a reembolso (R13). (H17)
 
 R13 *(alterada)*
 O reembolso de pacote só pode ser pedido até as 23h59 do 7º dia depois da compra, sem nenhuma condição sobre quanto foi assistido. Quem foi reembolsado pode comprar o mesmo pacote de novo, mas essa nova compra não dá direito a reembolso. (12.3, 13.1, 13.2)
