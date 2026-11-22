@@ -86,12 +86,12 @@ Glossário do domínio da plataforma de ensino por níveis. Cada termo tem um s�
 | Pacote | Conjunto de aulas gravadas de uma matéria e um nível, vendido junto. Criado pelo professor, numa matéria em que está habilitado; a matéria e o nível não mudam depois, e só quem o criou o edita (R15, R56). | `Pacote` |
 | Estado do pacote | Ponto do pacote no fluxo rascunho → em revisão → publicado → arquivado. O professor envia para revisão o pacote com pelo menos 1 aula; o ADM publica ou devolve, e pode publicar de novo um pacote arquivado (R15, R57). O professor edita o rascunho e o publicado, nunca o em revisão nem o arquivado (R57). | `EstadoPacote` (`rascunho`, `em_revisao`, `publicado`, `arquivado`) |
 | Devolução | Volta do pacote em revisão para rascunho, pelo ADM, para o professor editá-lo e enviá-lo de novo (R38). | `devolver` |
-| Aula gravada | Vídeo de um pacote, incorporado do YouTube (não listado), com título e link. Numerada de 1 em diante dentro do pacote. No publicado, o professor adiciona e corrige aulas, mas não remove (R58). | `AulaGravada` (`numero`, `titulo`, `link`) |
-| Aula concluída | Marcação do aluno de que terminou uma aula gravada. Conta como atividade de estudo. | `AulaConcluida` |
-| Vitrine | Lista dos pacotes publicados, de todos os níveis, com destaque para os do nível do aluno (R31). | `Vitrine` |
+| Aula gravada | Vídeo de um pacote, do YouTube (não listado), com título e link. O aluno com acesso o assiste no navegador (R61). Numerada de 1 em diante dentro do pacote. No publicado, o professor adiciona e corrige aulas, mas não remove (R58). | `AulaGravada` (`numero`, `titulo`, `link`) |
+| Aula concluída | Marcação do aluno de que terminou uma aula gravada, feita com o acesso ativo. Fica com a data, não é desfeita e conta como atividade de estudo (R62). | `AulaConcluida` (`concluida_em`) |
+| Vitrine | Lista dos pacotes publicados, de todos os níveis. Os do nível do aluno em cada matéria vêm primeiro, em destaque; quem não tem nível vê todos sem destaque (R15, R31). | `vitrine`, `NaVitrine` (`destaque`) |
 | Preço | Valor de um pacote, maior que zero. Só o ADM define, ao publicar, e altera depois, no publicado ou no arquivado; a mudança vale para as compras seguintes (R15, R59). | `preco_em_centavos` |
-| Compra | Aquisição simulada de um pacote, que cria um acesso (R12). | `Compra` |
-| Acesso | Direito de assistir a um pacote por 12 meses a partir da compra. Enquanto está ativo, o aluno não compra o mesmo pacote de novo (R12). | `Acesso` |
+| Compra | Aquisição simulada de um pacote publicado, pelo preço do momento, que cria um acesso (R12, R59). | `Compra` (`valor_em_centavos`, `comprada_em`) |
+| Acesso | Direito de assistir a um pacote por 12 meses a partir da compra, até as 23h59 do dia (R60). Enquanto está ativo, o aluno não compra o mesmo pacote de novo, mesmo que o pacote seja arquivado (R12). | `Acesso` (`ate`, `ativo`) |
 | Reembolso | Devolução do valor de uma compra de pacote, pedida até as 23h59 do 7º dia depois da compra (R13). Não existe para mensalidade (R29). | `Reembolso` |
 | Cupom | Código de desconto percentual, de até 50%, só para pacotes. Fora do MVP (R14). | `Cupom` |
 | Simulado | Prova de múltipla escolha de um pacote, liberada depois de 100% das aulas, que dá o certificado de pacote. Fora do MVP (R16). | `Simulado` |

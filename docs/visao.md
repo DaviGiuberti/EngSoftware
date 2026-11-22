@@ -92,7 +92,7 @@ Medir só vale se o resultado mudar o próximo passo (construir → medir → ap
 | Subida de nível | No fim da etapa de 24 aulas, sobe um nível quem tem no máximo 6 faltas e nota ≥ 7. Quem não cumpre sai da turma e recomeça o nível (R08, R17, R21). |
 | Certificados de nível e de trilha | Emitidos automaticamente quando o aluno sobe de nível e quando conclui o nível máximo (R33). |
 | Mensalidade | Pagamento simulado. A primeira é paga na matrícula, e as seguintes vencem todo mês no mesmo dia, com 7 dias de tolerância antes de o aluno perder a vaga (R27, R28). |
-| Pacotes de aulas gravadas | O professor cria e envia para revisão; o ADM define o preço e publica. Vídeos incorporados (YouTube não listado). Qualquer aluno compra pacote de qualquer nível (R15, R31). |
+| Pacotes de aulas gravadas | O professor cria e envia para revisão; o ADM define o preço e publica. Vídeos do YouTube (não listados), que o aluno assiste no navegador ([ADR 0004](adr/0004-video-no-navegador.md)). Qualquer aluno compra pacote de qualquer nível (R15, R31). |
 | Compra e reembolso | Compra simulada, que libera 12 meses de acesso. Reembolso até as 23h59 do 7º dia depois da compra (R12, R13). |
 | Aula gravada concluída | O aluno marca a aula como concluída. Esse registro alimenta as métricas. |
 | Métricas | Uma tela simples do ADM com M1, M2 e M3 do período. |
@@ -106,7 +106,7 @@ Pelo YAGNI, estes itens só entram quando houver evidência de que são necessá
 | Pagamento real | Pagamento simulado, para pacotes e mensalidades. |
 | Cupons (R14) | Nada. A regra fica documentada para depois. |
 | Certificado de pacote e simulado (R16) | Nada. A regra fica documentada; os certificados de nível e de trilha entram. |
-| Upload e hospedagem de vídeos | Vídeo incorporado por link. |
+| Upload e hospedagem de vídeos | Link do vídeo do YouTube, aberto no navegador. |
 | Videochamada dentro da plataforma | Link externo do Google Meet. |
 | Teste adaptativo e sorteio de questões | Um teste fixo por matéria. |
 | Vários fusos horários | Tudo no horário de Brasília. |

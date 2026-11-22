@@ -184,6 +184,15 @@ O ADM define o preço do pacote, maior que zero, ao publicá-lo, e pode mudá-lo
 R12 *(alterada)*
 A compra de um pacote libera o acesso por 12 meses. Com acesso ativo, o aluno não pode comprar o mesmo pacote de novo. Se o pacote for arquivado, quem comprou mantém o acesso até o fim dos 12 meses. (13.3, 13.4)
 
+R60
+O acesso do pacote vale até as 23h59 do dia da compra, 12 meses depois; na virada para o dia seguinte, ele vence. Quando o mês não tem o dia da compra, vale até o último dia dele: quem compra em 29/02/2028 tem acesso até 28/02/2029. (H15)
+
+R61
+O aluno assiste à aula gravada no navegador, pelo link do YouTube, e só com o acesso ativo ao pacote (R12). (H16)
+
+R62
+Com o acesso ativo, o aluno marca a aula gravada como concluída. A marcação fica guardada com a data e não é desfeita, e marcar de novo a mesma aula é recusado. (H16)
+
 R13 *(alterada)*
 O reembolso de pacote só pode ser pedido até as 23h59 do 7º dia depois da compra, sem nenhuma condição sobre quanto foi assistido. Quem foi reembolsado pode comprar o mesmo pacote de novo, mas essa nova compra não dá direito a reembolso. (12.3, 13.1, 13.2)
 
