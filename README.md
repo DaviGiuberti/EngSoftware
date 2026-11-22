@@ -45,6 +45,8 @@ Na aba "Turmas", o ADM cria cada turma com a matéria, o nível inicial, o profe
 
 O aluno vê em "Meus níveis" o nível dele em cada matéria e faz o nivelamento das matérias que ainda não têm nível. O teste tem 60 minutos, que só correm com ele aberto: quem sai no meio continua depois de onde parou. Na aba "Exceções do nivelamento", o ADM dá mais tempo a um aluno que está fazendo o teste ou libera que ele refaça o nivelamento uma vez.
 
+Na aba "Turmas", o aluno vê as turmas do nível dele em cada matéria e se matricula pagando a primeira mensalidade. O pagamento é simulado ([ADR 0003](docs/adr/0003-pagamento-simulado.md)). A matrícula vai até antes da 13ª aula da etapa, e o aluno tem no máximo uma turma por matéria. Na turma cheia, ele entra na lista de espera. Quando abre uma vaga, o primeiro da lista vê o aviso no título da aba e tem 72 horas para confirmar, pagando a mensalidade. O aluno também pode sair da turma, e a mensalidade já paga não é devolvida.
+
 A barra de status mostra "Banco: ok" quando o banco foi criado ou atualizado e respondeu. Veja [onde ficam os dados](#onde-ficam-os-dados).
 
 ## Como testar
