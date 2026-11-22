@@ -1,11 +1,13 @@
-"""Aba Turmas do aluno (H04, H05, H06, H13): as turmas do nível dele, com a matrícula, a lista
-de espera, o aviso da vaga oferecida e a saída da turma."""
+"""Aba Turmas do aluno (H04, H05, H06, H13, H08): as turmas do nível dele, com a matrícula, a
+lista de espera, o aviso da vaga oferecida, a saída da turma e, nas turmas em que ele está, a
+aula da etapa e as faltas."""
 
 from collections.abc import Callable
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QGroupBox,
     QHeaderView,
     QLabel,
     QPushButton,
@@ -23,8 +25,10 @@ from plataforma.modules.turmas.application.matricula import (
     MatriculaFeita,
     TurmaDoAluno,
 )
+from plataforma.modules.turmas.domain.etapa import AULAS_POR_ETAPA
 from plataforma.modules.turmas.domain.horario import descrever_horario, formatar_data_e_hora
 from plataforma.modules.turmas.domain.matricula import SituacaoNaTurma
+from plataforma.modules.turmas.domain.presenca import LIMITE_DE_FALTAS, passou_do_limite
 from plataforma.modules.turmas.ui.comum import descrever_etapa, nome_da_turma
 from plataforma.ui_comum import mostrar_aviso, mostrar_recusa, mostrar_sucesso, titulo
 
@@ -58,6 +62,23 @@ def avisar_vaga(vista: TurmaDoAluno) -> str | None:
         f"{descrever_horario(vista.resumo.horario)}. "
         f"Confirme até {formatar_data_e_hora(vista.prazo_para_confirmar)}."
     )
+
+
+def descrever_aula_da_etapa(aulas_dadas: int) -> str:
+    """H08: "aula 15 de 24", ou antes da 1ª aula da etapa."""
+    if aulas_dadas == 0:
+        return "antes da 1ª aula"
+    return f"aula {aulas_dadas} de {AULAS_POR_ETAPA}"
+
+
+def descrever_faltas(faltas: int) -> str:
+    """H08: as faltas do aluno na etapa e o limite de 6 (R08)."""
+    if passou_do_limite(faltas):
+        return (
+            f"{faltas} faltas: você passou do limite de {LIMITE_DE_FALTAS} e não será promovido "
+            "nesta etapa."
+        )
+    return f"{faltas} de {LIMITE_DE_FALTAS} faltas permitidas"
 
 
 def _pagamento(feita: MatriculaFeita) -> str:
@@ -98,12 +119,24 @@ class TelaTurmasDoAluno(QWidget):
         cabecalho.setStretchLastSection(True)
         self.mensagem = QLabel()
         self.mensagem.setWordWrap(True)
+        self.etapas = QTableWidget(0, 3)
+        self.etapas.setHorizontalHeaderLabels(["Turma", "Aula", "Faltas"])
+        self.etapas.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.etapas.verticalHeader().setVisible(False)
+        self.etapas.setMaximumHeight(140)
+        cabecalho_das_etapas = self.etapas.horizontalHeader()
+        cabecalho_das_etapas.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        cabecalho_das_etapas.setStretchLastSection(True)
+        self._grupo_das_etapas = QGroupBox("Minhas etapas")
+        QVBoxLayout(self._grupo_das_etapas).addWidget(self.etapas)
+        self._grupo_das_etapas.hide()
 
         coluna = QVBoxLayout(self)
         coluna.addWidget(titulo("Turmas"))
         coluna.addWidget(self.avisos)
         coluna.addWidget(explicacao)
         coluna.addWidget(self.tabela, 1)
+        coluna.addWidget(self._grupo_das_etapas)
         coluna.addWidget(self.mensagem)
         self.recarregar()
 
@@ -151,8 +184,23 @@ class TelaTurmasDoAluno(QWidget):
         self.avisos.setVisible(bool(avisos))
         self.vagas_oferecidas = len(avisos)
         self.avisos_mudaram.emit(self.vagas_oferecidas)
+        self._preencher_etapas(vistas)
         if not vistas:
             mostrar_aviso(self.mensagem, SEM_TURMAS)
+
+    def _preencher_etapas(self, vistas: list[TurmaDoAluno]) -> None:
+        """H08: em cada turma em que o aluno está, a aula da etapa e as faltas dele (R08)."""
+        minhas = [vista for vista in vistas if vista.situacao == SituacaoNaTurma.MATRICULADO]
+        self.etapas.setRowCount(len(minhas))
+        for linha, vista in enumerate(minhas):
+            valores = [
+                nome_da_turma(vista.resumo),
+                descrever_aula_da_etapa(vista.resumo.aulas_dadas),
+                descrever_faltas(vista.faltas or 0),
+            ]
+            for coluna, valor in enumerate(valores):
+                self.etapas.setItem(linha, coluna, QTableWidgetItem(valor))
+        self._grupo_das_etapas.setVisible(bool(minhas))
 
     def _acao(self, vista: TurmaDoAluno) -> tuple[str, Callable[[], None]] | None:
         """O botão de cada situação: o texto e o que ele faz."""

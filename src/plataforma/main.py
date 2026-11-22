@@ -79,6 +79,12 @@ from plataforma.modules.turmas.application.matricula import (
     SairDaTurma,
     VerTurmasDoAluno,
 )
+from plataforma.modules.turmas.application.presenca import (
+    CasosDeUsoDasAulas,
+    LancarPresenca,
+    MarcarAulaNaoRealizada,
+    VerAulasDaTurma,
+)
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
 from plataforma.relogio import RelogioDoSistema
 
@@ -119,6 +125,14 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
         consulta_de_materias,
         consulta_de_professores,
         niveis,
+        relogio,
+        em_transacao,
+    )
+    das_aulas = (
+        turmas,
+        consulta_de_materias,
+        consulta_de_professores,
+        alunos,
         relogio,
         em_transacao,
     )
@@ -170,6 +184,11 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
             entrar_na_lista=EntrarNaListaDeEspera(*do_aluno_nas_turmas),
             confirmar_vaga=ConfirmarVaga(*do_aluno_nas_turmas),
             sair_da_turma=SairDaTurma(*do_aluno_nas_turmas),
+        ),
+        aulas=CasosDeUsoDasAulas(
+            ver_aulas=VerAulasDaTurma(*das_aulas),
+            lancar_presenca=LancarPresenca(*das_aulas),
+            marcar_nao_realizada=MarcarAulaNaoRealizada(*das_aulas),
         ),
     )
 
