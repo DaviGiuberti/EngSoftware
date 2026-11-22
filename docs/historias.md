@@ -578,7 +578,7 @@ Cenário: R10 — presença em turma de outro professor
 
 ### H22 · Marcar aula não realizada
 
-Como professor, quero marcar uma aula como não realizada para que ela seja reposta no fim da etapa e não conte nas 24. Prioridade: Média. Regras: R17, R18.
+Como professor, quero marcar uma aula como não realizada para que ela seja reposta no fim da etapa e não conte nas 24. Prioridade: Média. Regras: R17, R18, R43, R48.
 
 ```gherkin
 Cenário: R17 e R18 — aula não realizada não conta nas 24
@@ -595,6 +595,11 @@ Cenário: R18 — aula não realizada não recebe presença
   Dada uma aula marcada como não realizada
   Quando o professor tenta lançar presença nela
   Então o sistema recusa
+
+Cenário: R48 — aula com presença não vira não realizada
+  Dada a 5ª aula de uma turma, já com a presença lançada
+  Quando o professor tenta marcá-la como não realizada
+  Então o sistema recusa, porque a aula aconteceu
 ```
 
 ### H23 · Lançar a nota da prova final
@@ -1060,3 +1065,4 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R45 | H06 |
 | R46 | H07 |
 | R47 | H06 |
+| R48 | H22 |
