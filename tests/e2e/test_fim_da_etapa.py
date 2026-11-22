@@ -8,7 +8,12 @@ from datetime import date, time
 
 from PySide6.QtWidgets import QPushButton
 
-from plataforma.janela_principal import AbasDoAluno, AreaDoAdm, JanelaPrincipal
+from plataforma.janela_principal import (
+    AbasDoAluno,
+    AbasDoProfessor,
+    AreaDoAdm,
+    JanelaPrincipal,
+)
 from plataforma.modules.identidade.domain.usuario import Usuario
 from plataforma.modules.turmas.domain.horario import DiaDaSemana
 from plataforma.modules.turmas.ui.telas_do_professor import (
@@ -59,7 +64,9 @@ def ir_para_sexta_12_02_as_10h(app: App) -> None:
 def entrar_como_carlos(app: App, janela: JanelaPrincipal) -> TelaMinhasTurmas:
     """Entra como o professor e escolhe a turma dele na tabela."""
     app.entrar(janela, "carlos@exemplo.com", SENHA_DOS_PROFESSORES)
-    tela = janela.tela_inicio.area
+    abas = janela.tela_inicio.area
+    assert isinstance(abas, AbasDoProfessor)
+    tela = abas.turmas
     assert isinstance(tela, TelaMinhasTurmas)
     tela.tabela.selectRow(0)
     return tela
