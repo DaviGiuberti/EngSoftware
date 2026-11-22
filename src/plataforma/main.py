@@ -17,7 +17,14 @@ from plataforma.banco import (
 from plataforma.compartilhado.relogio import Relogio
 from plataforma.janela_principal import CasosDeUso, JanelaPrincipal
 from plataforma.log import configurar_log, fechar_log
-from plataforma.modules.catalogo.application.casos_de_uso import montar_casos_de_uso
+from plataforma.modules.catalogo.application.aulas_do_aluno import montar_casos_de_uso_do_aluno
+from plataforma.modules.catalogo.application.casos_de_uso import (
+    ConsultaDePacotes,
+    montar_casos_de_uso,
+)
+from plataforma.modules.catalogo.infra.repositorio_de_aulas_concluidas import (
+    RepositorioDeAulasConcluidasSqlite,
+)
 from plataforma.modules.catalogo.infra.repositorio_de_pacotes import RepositorioDePacotesSqlite
 from plataforma.modules.identidade.application.casos_de_uso import (
     CadastrarAluno,
@@ -101,6 +108,11 @@ from plataforma.modules.turmas.application.prova_final import (
     VerProvaFinal,
 )
 from plataforma.modules.turmas.infra.repositorio_de_turmas import RepositorioDeTurmasSqlite
+from plataforma.modules.vendas.application.casos_de_uso import (
+    ConsultaDeAcessos,
+    montar_casos_de_uso_de_vendas,
+)
+from plataforma.modules.vendas.infra.repositorio_de_compras import RepositorioDeComprasSqlite
 from plataforma.relogio import RelogioDoSistema
 
 
@@ -164,6 +176,8 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
         em_transacao,
         em_dia,
     )
+    pacotes = RepositorioDePacotesSqlite(conexao)
+    compras = RepositorioDeComprasSqlite(conexao)
     casos_de_uso = CasosDeUso(
         identidade=CasosDeUsoDaIdentidade(
             cadastrar_aluno=CadastrarAluno(usuarios, em_transacao),
@@ -228,10 +242,21 @@ def criar_janela(pasta_de_dados: Path, relogio: Relogio | None = None) -> Janela
             corrigir_nota=CorrigirNota(*das_aulas),
         ),
         catalogo=montar_casos_de_uso(
-            RepositorioDePacotesSqlite(conexao),
+            pacotes, consulta_de_materias, consulta_de_professores, em_transacao
+        ),
+        # O catalogo pergunta o acesso ao vendas pela porta Acessos (ADR 0002).
+        catalogo_do_aluno=montar_casos_de_uso_do_aluno(
+            pacotes,
+            RepositorioDeAulasConcluidasSqlite(conexao),
             consulta_de_materias,
             consulta_de_professores,
+            niveis,
+            ConsultaDeAcessos(compras),
+            relogio,
             em_transacao,
+        ),
+        vendas=montar_casos_de_uso_de_vendas(
+            compras, ConsultaDePacotes(pacotes), relogio, em_transacao
         ),
     )
 

@@ -39,3 +39,6 @@ Regras:
 
 ## Atualização de 2026-11-21: módulo materias
 A Matéria ganhou um módulo próprio, `materias`, na fatia 2. Ela é usada pelo nivelamento (faixas), pelas turmas (nível máximo e mensalidade) e pelos pacotes, e o EventStorming já a tratava como um agregado próprio. Deixá-la no `nivelamento` faria as turmas e os pacotes perguntarem a mensalidade ao nivelamento. As questões ficam no `nivelamento`, como no agregado Nivelamento do EventStorming. Os outros módulos consultam a matéria por uma função pública do `materias`, sem ler as tabelas dele.
+
+## Atualização de 2026-11-22: catalogo e vendas
+Na fatia 12, a vitrine, as aulas que o aluno assiste e as aulas concluídas ficam no `catalogo`, e a compra e o acesso ficam no `vendas`. O `vendas` lê os pacotes pela consulta pública do `catalogo` para vender só os publicados, pelo preço do momento. O `catalogo` precisa saber se o aluno tem acesso ao pacote, mas não importa o `vendas`: ele declara uma porta, `Acessos`, e o `main.py` liga a ela a consulta de acessos do `vendas`. Assim a dependência entre os dois módulos tem um sentido só, do `vendas` para o `catalogo`.

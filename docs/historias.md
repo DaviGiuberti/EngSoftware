@@ -414,7 +414,7 @@ Cenário: R31 — aluno sem nível vê todos os pacotes
 
 ### H15 · Comprar um pacote
 
-Como aluno, quero comprar um pacote gravado, mesmo sem ter feito o nivelamento, para estudar no meu ritmo. Prioridade: Alta. Regras: R12, R15, R31.
+Como aluno, quero comprar um pacote gravado, mesmo sem ter feito o nivelamento, para estudar no meu ritmo. Prioridade: Alta. Regras: R12, R15, R31, R60.
 
 ```gherkin
 Cenário: R31 — compra sem nivelamento
@@ -437,19 +437,24 @@ Cenário: R15 — pacote arquivado não é vendido
   Dado um pacote arquivado
   Quando um aluno tenta comprá-lo
   Então o sistema recusa a compra
+
+Cenário: R60 — compra num dia que o mês, 12 meses depois, não tem
+  Dado um aluno sem acesso a um pacote
+  Quando ele compra o pacote em 29/02/2028
+  Então ele tem acesso ao pacote até 28/02/2029
 ```
 
 ### H16 · Assistir e concluir aulas gravadas
 
-Como aluno, quero assistir às aulas de um pacote e marcar cada uma como concluída para acompanhar meu progresso. Prioridade: Alta. Regras: R12, R32.
+Como aluno, quero assistir às aulas de um pacote e marcar cada uma como concluída para acompanhar meu progresso. Prioridade: Alta. Regras: R12, R32, R61, R62.
 
 ```gherkin
-Cenário: R12 — com acesso, o aluno marca a aula como concluída
+Cenário: R12 e R62 — com acesso, o aluno marca a aula como concluída
   Dado um aluno com acesso ativo a um pacote de 10 aulas
   Quando ele marca a 3ª aula como concluída
   Então o pacote mostra 1 de 10 aulas concluídas
 
-Cenário: R12 — acesso vencido bloqueia as aulas
+Cenário: R12 e R61 — acesso vencido bloqueia as aulas
   Dado um aluno cujo acesso a um pacote venceu ontem
   Quando ele tenta abrir uma aula do pacote
   Então o sistema bloqueia a aula
@@ -464,6 +469,12 @@ Cenário: R32 — concluir um pacote não promove
   Dado um aluno no N1 de Física que concluiu todas as aulas de um pacote de Física do N1
   Quando ele abre o perfil
   Então ele continua no N1 de Física
+
+Cenário: R62 — a aula concluída não é marcada de novo
+  Dado um aluno que marcou a 3ª aula de um pacote como concluída em 12/03
+  Quando ele tenta marcá-la de novo em 13/03
+  Então o sistema recusa
+  E a aula continua concluída em 12/03
 ```
 
 ### H17 · Pedir reembolso de um pacote
@@ -1129,3 +1140,6 @@ Toda regra do regras.md é testada por pelo menos um critério.
 | R57 | H25, H26, H35 |
 | R58 | H26 |
 | R59 | H34, H35 |
+| R60 | H15 |
+| R61 | H16 |
+| R62 | H16 |
