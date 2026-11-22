@@ -1,6 +1,7 @@
-"""Aba "Pacotes" do aluno (H14, H15, H16): a vitrine com os pacotes publicados de todos os níveis,
-com destaque para o nível dele (R15, R31), a compra (R12, R60) e os pacotes comprados, com as aulas,
-que abrem no navegador (R61, ADR 0004), e a aula concluída (R62)."""
+"""Aba "Pacotes" do aluno (H14, H15, H16, H17): a vitrine com os pacotes publicados de todos os
+níveis, com destaque para o nível dele (R15, R31), a compra (R12, R60) e os pacotes comprados, com
+as aulas, que abrem no navegador (R61, ADR 0004), a aula concluída (R62) e o reembolso (R13,
+R63)."""
 
 from collections.abc import Callable
 from datetime import date
@@ -40,6 +41,10 @@ SEM_PACOTES = "Nenhum pacote à venda ainda."
 EXPLICACAO = (
     "Você compra pacotes de qualquer nível, com ou sem nivelamento; os do seu nível em cada "
     "matéria aparecem primeiro. A compra dá 12 meses de acesso. As aulas abrem no navegador."
+)
+EXPLICACAO_DO_REEMBOLSO = (
+    "O reembolso pode ser pedido até as 23h59 do 7º dia depois da compra. Ele encerra o acesso e "
+    "apaga as aulas concluídas do pacote. Comprado de novo, o pacote não tem mais reembolso."
 )
 
 
@@ -95,12 +100,17 @@ class TelaPacotesDoAluno(QWidget):
         self.aulas = tabela_de_escolha(["Nº", "Título", "Situação"])
         self.botao_assistir = QPushButton("Assistir no navegador")
         self.botao_concluir = QPushButton("Marcar como concluída")
+        self.botao_reembolso = QPushButton("Pedir reembolso do pacote")
         grupo_dos_comprados = QGroupBox("Meus pacotes")
         coluna_dos_comprados = QVBoxLayout(grupo_dos_comprados)
         coluna_dos_comprados.addWidget(self.comprados, 1)
         coluna_dos_comprados.addWidget(QLabel("Aulas do pacote escolhido"))
         coluna_dos_comprados.addWidget(self.aulas, 1)
+        explicacao_do_reembolso = QLabel(EXPLICACAO_DO_REEMBOLSO)
+        explicacao_do_reembolso.setWordWrap(True)
+        coluna_dos_comprados.addWidget(explicacao_do_reembolso)
         linha_das_aulas = QHBoxLayout()
+        linha_das_aulas.addWidget(self.botao_reembolso)
         linha_das_aulas.addStretch()
         linha_das_aulas.addWidget(self.botao_assistir)
         linha_das_aulas.addWidget(self.botao_concluir)
@@ -119,6 +129,7 @@ class TelaPacotesDoAluno(QWidget):
         self.botao_comprar.clicked.connect(self._comprar)
         self.botao_assistir.clicked.connect(self._assistir)
         self.botao_concluir.clicked.connect(self._concluir)
+        self.botao_reembolso.clicked.connect(self._pedir_reembolso)
         self.recarregar()
 
     def recarregar(self) -> None:
@@ -251,6 +262,29 @@ class TelaPacotesDoAluno(QWidget):
             case Feito(link):
                 self.abrir_link(link)
                 mostrar_sucesso(self.mensagem, f"A {numero}ª aula abriu no navegador.")
+            case Falhou(mensagem):
+                mostrar_recusa(self.mensagem, mensagem)
+
+    def _pedir_reembolso(self) -> None:
+        comprado = self._escolhido()
+        if comprado is None:
+            mostrar_aviso(self.mensagem, "Escolha um pacote em Meus pacotes.")
+            return
+        pacote = comprado.resumo.pacote
+        resultado = executar(
+            "pedir reembolso",
+            self._usuario.email,
+            lambda: self._vendas.pedir_reembolso.executar(self._usuario, pacote.id),
+        )
+        match resultado:
+            case Feito(reembolsada):
+                self.recarregar()
+                mostrar_sucesso(
+                    self.mensagem,
+                    f"Reembolso de {pacote.titulo} aceito: "
+                    f"{formatar_reais(reembolsada.valor_em_centavos)} devolvidos. O acesso foi "
+                    "encerrado.",
+                )
             case Falhou(mensagem):
                 mostrar_recusa(self.mensagem, mensagem)
 
