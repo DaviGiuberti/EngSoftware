@@ -16,6 +16,14 @@ class Promocao:
     em: datetime
 
 
+@dataclass(frozen=True)
+class PromocaoDoAluno:
+    """A promoção com o aluno que subiu, para as métricas (R65)."""
+
+    aluno_id: int
+    promocao: Promocao
+
+
 def promover(
     materia_id: int, nivel_atual: int, nivel_da_etapa: int, nivel_maximo: int, em: datetime
 ) -> Promocao | None:

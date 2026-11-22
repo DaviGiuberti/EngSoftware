@@ -11,10 +11,11 @@ from typing import Any
 from plataforma.modules.nivelamento.domain.nivelamento import (
     Conclusao,
     Nivelamento,
+    NivelamentoNoHistorico,
     NivelDoAluno,
     TempoDoNivelamento,
 )
-from plataforma.modules.nivelamento.domain.promocao import Promocao
+from plataforma.modules.nivelamento.domain.promocao import Promocao, PromocaoDoAluno
 
 _POR_ID = (
     "SELECT id, aluno_id, materia_id, tempo_usado_em_segundos, tempo_extra_em_segundos, "
@@ -131,6 +132,28 @@ class RepositorioDeNivelamentosSqlite:
         return [
             Promocao(materia_id, anterior, novo, datetime.fromisoformat(em))
             for materia_id, anterior, novo, em in linhas
+        ]
+
+    def concluidos_de_todos(self) -> list[NivelamentoNoHistorico]:
+        linhas = self._conexao.execute(
+            "SELECT aluno_id, materia_id, nivel, concluido_em FROM nivelamento "
+            "WHERE concluido_em IS NOT NULL ORDER BY concluido_em, id"
+        )
+        return [
+            NivelamentoNoHistorico(aluno_id, materia_id, nivel, datetime.fromisoformat(em))
+            for aluno_id, materia_id, nivel, em in linhas
+        ]
+
+    def promocoes_de_todos(self) -> list[PromocaoDoAluno]:
+        linhas = self._conexao.execute(
+            "SELECT aluno_id, materia_id, nivel_anterior, nivel_novo, promovido_em FROM promocao "
+            "ORDER BY promovido_em, aluno_id, materia_id"
+        )
+        return [
+            PromocaoDoAluno(
+                aluno_id, Promocao(materia_id, anterior, novo, datetime.fromisoformat(em))
+            )
+            for aluno_id, materia_id, anterior, novo, em in linhas
         ]
 
     def concluir_trilha(self, aluno_id: int, materia_id: int, em: datetime) -> None:

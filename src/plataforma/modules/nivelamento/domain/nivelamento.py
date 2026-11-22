@@ -124,6 +124,17 @@ class Nivelamento:
 
 
 @dataclass(frozen=True)
+class NivelamentoNoHistorico:
+    """Um nivelamento concluído, com o aluno, a matéria, o nível que deu e quando. As métricas o
+    leem pelo HistoricoDoNivelamento (R64)."""
+
+    aluno_id: int
+    materia_id: int
+    nivel: int
+    concluido_em: datetime
+
+
+@dataclass(frozen=True)
 class NivelDoAluno:
     """O nível do aluno numa matéria (R01) e se o ADM liberou que ele refaça o nivelamento."""
 

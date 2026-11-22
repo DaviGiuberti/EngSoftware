@@ -8,7 +8,7 @@ from plataforma.modules.turmas.domain.etapa import Etapa
 from plataforma.modules.turmas.domain.lista_de_espera import ListaDeEspera
 from plataforma.modules.turmas.domain.matricula import Matricula, MotivoDaSaida
 from plataforma.modules.turmas.domain.mensalidade import Mensalidade
-from plataforma.modules.turmas.domain.presenca import Presenca
+from plataforma.modules.turmas.domain.presenca import Presenca, PresencaNaMateria
 from plataforma.modules.turmas.domain.prova_final import Nota, ProvaFinal, ResultadoEtapa
 from plataforma.modules.turmas.domain.turma import MudancaDaTurma, Turma, TurmaNova
 
@@ -129,6 +129,10 @@ class RepositorioDeTurmas(Protocol):
 
     def presencas(self, turma_id: int, nivel: int) -> list[Presenca]:
         """As presenças lançadas na etapa, em ordem de data."""
+        ...
+
+    def presentes_de_todos(self) -> list[PresencaNaMateria]:
+        """As presenças, sem as faltas, de todos os alunos em todas as turmas, em ordem de data."""
         ...
 
     def provas_finais(self, turma_id: int, nivel: int) -> list[ProvaFinal]:

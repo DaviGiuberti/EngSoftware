@@ -3,7 +3,10 @@
 import sqlite3
 from datetime import datetime
 
-from plataforma.modules.catalogo.domain.aulas_do_aluno import AulaConcluida
+from plataforma.modules.catalogo.domain.aulas_do_aluno import (
+    AulaConcluida,
+    AulaConcluidaNaMateria,
+)
 
 
 class RepositorioDeAulasConcluidasSqlite:
@@ -27,6 +30,17 @@ class RepositorioDeAulasConcluidasSqlite:
             "VALUES (?, ?, ?, ?)",
             (aluno_id, concluida.pacote_id, concluida.numero, concluida.concluida_em.isoformat()),
         )
+
+    def de_todos(self) -> list[AulaConcluidaNaMateria]:
+        linhas = self._conexao.execute(
+            "SELECT aula.aluno_id, pacote.materia_id, pacote.nivel, aula.concluida_em "
+            "FROM aula_concluida AS aula JOIN pacote ON pacote.id = aula.pacote_id "
+            "ORDER BY aula.concluida_em, aula.aluno_id"
+        )
+        return [
+            AulaConcluidaNaMateria(aluno_id, materia_id, nivel, datetime.fromisoformat(em))
+            for aluno_id, materia_id, nivel, em in linhas
+        ]
 
     def apagar(self, aluno_id: int, pacote_id: int) -> None:
         self._conexao.execute(

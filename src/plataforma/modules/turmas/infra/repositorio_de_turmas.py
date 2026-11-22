@@ -15,7 +15,7 @@ from plataforma.modules.turmas.domain.horario import DiaDaSemana, Horario
 from plataforma.modules.turmas.domain.lista_de_espera import ListaDeEspera, NaLista
 from plataforma.modules.turmas.domain.matricula import Matricula, MotivoDaSaida
 from plataforma.modules.turmas.domain.mensalidade import Mensalidade
-from plataforma.modules.turmas.domain.presenca import Presenca
+from plataforma.modules.turmas.domain.presenca import Presenca, PresencaNaMateria
 from plataforma.modules.turmas.domain.prova_final import Nota, ProvaFinal, ResultadoEtapa
 from plataforma.modules.turmas.domain.turma import (
     Encerramento,
@@ -301,6 +301,18 @@ class RepositorioDeTurmasSqlite:
         return [
             Presenca(aluno_id, date.fromisoformat(data), bool(presente))
             for aluno_id, data, presente in linhas
+        ]
+
+    def presentes_de_todos(self) -> list[PresencaNaMateria]:
+        linhas = self._conexao.execute(
+            "SELECT presenca.aluno_id, turma.materia_id, presenca.nivel, presenca.data_da_aula "
+            "FROM presenca JOIN turma ON turma.id = presenca.turma_id "
+            "WHERE presenca.presente = 1 "
+            "ORDER BY presenca.data_da_aula, presenca.aluno_id, presenca.turma_id"
+        )
+        return [
+            PresencaNaMateria(aluno_id, materia_id, nivel, date.fromisoformat(data))
+            for aluno_id, materia_id, nivel, data in linhas
         ]
 
     def provas_finais(self, turma_id: int, nivel: int) -> list[ProvaFinal]:

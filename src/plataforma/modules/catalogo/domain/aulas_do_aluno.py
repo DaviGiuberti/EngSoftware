@@ -48,6 +48,17 @@ class AulaConcluida:
     concluida_em: datetime
 
 
+@dataclass(frozen=True)
+class AulaConcluidaNaMateria:
+    """Uma aula concluída com o aluno e a matéria e o nível do pacote. É uma atividade de estudo
+    para as métricas (R64)."""
+
+    aluno_id: int
+    materia_id: int
+    nivel: int
+    concluida_em: datetime
+
+
 def vitrine(pacotes: Iterable[Pacote], niveis: Mapping[int, int]) -> list[NaVitrine]:
     """R15 e R31: os pacotes publicados, de todos os níveis. Os do nível do aluno em cada matéria
     vêm primeiro, em destaque; os outros seguem na ordem em que chegaram.
